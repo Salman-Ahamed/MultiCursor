@@ -34,14 +34,13 @@ bool SettingsWindow::Initialize(HINSTANCE hInstance, HWND parent, SettingsManage
     m_hwnd = CreateWindowExW(0, L"MultiCursorSettingsWindow", L"MultiCursor Settings",
                               WS_OVERLAPPEDWINDOW,
                               CW_USEDEFAULT, CW_USEDEFAULT, 400, 300,
-                              parent, nullptr, hInstance, nullptr);
+                              parent, nullptr, hInstance, this);
 
     if (!m_hwnd) {
         LOG_ERROR(L"Failed to create SettingsWindow: %d", GetLastError());
         return false;
     }
-
-    SetWindowLongPtrW(m_hwnd, GWLP_USERDATA, (LONG_PTR)this);
+    // GWLP_USERDATA set in WM_NCCREATE via CREATESTRUCT.lpCreateParams
 
     LOG_INFO(L"SettingsWindow initialized");
     return true;
@@ -155,6 +154,12 @@ void SettingsWindow::SaveSettings() {
 }
 
 LRESULT CALLBACK SettingsWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_NCCREATE) {
+        CREATESTRUCT* cs = (CREATESTRUCT*)lParam;
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams);
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
     auto* self = (SettingsWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     switch (msg) {

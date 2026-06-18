@@ -93,6 +93,16 @@ void OverlayRenderer::RenderLoop() {
         dc->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
         dc->PopAxisAlignedClip();
 
+        // DIAGNOSTIC: draw a solid red rectangle to verify overlay is visible
+        {
+            ComPtr<ID2D1SolidColorBrush> diagBrush;
+            dc->CreateSolidColorBrush(D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.8f), &diagBrush);
+            if (diagBrush) {
+                D2D1_RECT_F diagRect = D2D1::RectF(100.0f, 100.0f, 300.0f, 300.0f);
+                dc->FillRectangle(diagRect, diagBrush.Get());
+            }
+        }
+
         // Draw cursors from snapshot
         for (UINT i = 0; i < kMaxDevices; i++) {
             auto& cursor = cursors[i];

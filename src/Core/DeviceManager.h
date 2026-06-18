@@ -20,7 +20,7 @@ public:
 
 private:
     bool EnumerateUnlocked();
-    bool ClassifyDevice(HANDLE hDevice, DeviceInfo& info);
+    bool ClassifyDevice(HANDLE hDevice, DeviceInfo& info, DWORD dwType);
 
     std::vector<DeviceInfo> m_devices;
     std::unordered_map<HANDLE, size_t> m_deviceMap;

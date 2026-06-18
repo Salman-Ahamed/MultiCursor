@@ -279,6 +279,8 @@ bool Direct2DRenderer::BeginDraw(const RECT& rect, POINT& offset) {
             m_surface.Reset();
             m_dcompDesktop->Commit();
             LOG_INFO(L"Swap chain fallback successful");
+            // Must begin D2D draw since we're now in swap chain mode
+            m_d2dContext->BeginDraw();
             m_inDraw = true;
             return true;
         }
@@ -300,9 +302,15 @@ bool Direct2DRenderer::BeginDraw(const RECT& rect, POINT& offset) {
 
 void Direct2DRenderer::EndDraw() {
     if (!m_inDraw) return;
-    m_d2dContext->EndDraw();
+    HRESULT hr = m_d2dContext->EndDraw();
+    if (FAILED(hr)) {
+        LOG_ERROR(L"D2D EndDraw failed: 0x%08X", hr);
+    }
     if (m_useSwapChain) {
-        m_swapChain->Present(1, 0);
+        HRESULT hr2 = m_swapChain->Present(1, 0);
+        if (FAILED(hr2)) {
+            LOG_ERROR(L"Swap chain Present failed: 0x%08X", hr2);
+        }
     } else {
         m_surface->EndDraw();
     }
@@ -310,7 +318,10 @@ void Direct2DRenderer::EndDraw() {
 }
 
 void Direct2DRenderer::Commit() {
-    m_dcompDesktop->Commit();
+    HRESULT hr = m_dcompDesktop->Commit();
+    if (FAILED(hr)) {
+        LOG_ERROR(L"DComp Commit failed: 0x%08X", hr);
+    }
 }
 
 bool Direct2DRenderer::ResizeSurface(int width, int height) {

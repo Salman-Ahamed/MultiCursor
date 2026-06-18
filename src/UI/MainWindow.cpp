@@ -38,14 +38,13 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
     m_hwnd = CreateWindowExW(0, L"MultiCursorMainWindow", L"MultiCursor - Device Manager",
                               WS_OVERLAPPEDWINDOW,
                               CW_USEDEFAULT, CW_USEDEFAULT, 500, 400,
-                              nullptr, nullptr, hInstance, nullptr);
+                              nullptr, nullptr, hInstance, this);
 
     if (!m_hwnd) {
         LOG_ERROR(L"Failed to create MainWindow: %d", GetLastError());
         return false;
     }
-
-    SetWindowLongPtrW(m_hwnd, GWLP_USERDATA, (LONG_PTR)this);
+    // GWLP_USERDATA set in WM_NCCREATE via CREATESTRUCT.lpCreateParams
 
     LOG_INFO(L"MainWindow initialized");
     return true;
@@ -54,6 +53,8 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
 void MainWindow::Show(int nCmdShow) {
     if (m_hwnd) {
         ShowWindow(m_hwnd, nCmdShow);
+        SetWindowPos(m_hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         UpdateWindow(m_hwnd);
     }
 }
@@ -140,6 +141,12 @@ void MainWindow::RefreshDeviceList() {
 }
 
 LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_NCCREATE) {
+        CREATESTRUCT* cs = (CREATESTRUCT*)lParam;
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams);
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
     auto* self = (MainWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     switch (msg) {

@@ -26,11 +26,12 @@ bool RawInputHandler::Initialize() {
     }
 
     m_hwnd = CreateWindowExW(0, L"MultiCursorRawInputWindow", L"RawInput",
-                             0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, wc.hInstance, nullptr);
+                             0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, wc.hInstance, this);
     if (!m_hwnd) {
         LOG_ERROR(L"Failed to create raw input message window");
         return false;
     }
+    // GWLP_USERDATA set in WM_NCCREATE via CREATESTRUCT.lpCreateParams
 
     RAWINPUTDEVICE rid = {};
     rid.usUsagePage = 0x01;
@@ -42,8 +43,6 @@ bool RawInputHandler::Initialize() {
         LOG_ERROR(L"RegisterRawInputDevices failed: %d", GetLastError());
         return false;
     }
-
-    SetWindowLongPtrW(m_hwnd, GWLP_USERDATA, (LONG_PTR)this);
 
     m_buffer.resize(64 * sizeof(RAWINPUT) + sizeof(RAWINPUTHEADER) + 16);
 
@@ -74,6 +73,8 @@ bool RawInputHandler::ProcessMessage(MSG& msg) {
 
 LRESULT CALLBACK RawInputHandler::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_NCCREATE) {
+        CREATESTRUCT* cs = (CREATESTRUCT*)lParam;
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams);
         return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
 

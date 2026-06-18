@@ -103,7 +103,7 @@ bool DeviceManager::EnumerateUnlocked() {
         info.name.resize(wcslen(info.name.c_str()));
         info.path = info.name;
 
-        if (!ClassifyDevice(list[i].hDevice, info))
+        if (!ClassifyDevice(list[i].hDevice, info, list[i].dwType))
             continue;
 
         if (info.type == DeviceType::Mouse)
@@ -140,7 +140,14 @@ bool DeviceManager::EnumerateUnlocked() {
     return true;
 }
 
-bool DeviceManager::ClassifyDevice(HANDLE hDevice, DeviceInfo& info) {
+bool DeviceManager::ClassifyDevice(HANDLE hDevice, DeviceInfo& info, DWORD dwType) {
+    // If the raw input system already identifies this as a mouse (RIM_TYPEMOUSE),
+    // trust it when HID preparsed data is not available
+    if (dwType == RIM_TYPEMOUSE) {
+        info.type = DeviceType::Mouse;
+        return true;
+    }
+
     UINT size = 0;
     if (GetRawInputDeviceInfoW(hDevice, RIDI_PREPARSEDDATA, nullptr, &size) == (UINT)-1 || size == 0) {
         if (info.path.find(L"SYNA") != std::wstring::npos ||

@@ -46,3 +46,178 @@
 [12:21:19.251][INF] State: 1 -> 5
 [12:21:19.266][INF] Render thread stopped
 [12:21:19.267][INF] MultiCursor exited
+[12:29:03.592][INF] MultiCursor starting...
+[12:29:03.602][INF] MainWindow initialized
+[12:29:03.604][INF] SettingsWindow initialized
+[12:29:03.623][INF] WindowManager initialized
+[12:29:03.697][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[12:29:03.698][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[12:29:03.698][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[12:29:03.707][INF] Render thread started
+[12:29:03.709][INF] RawInputHandler initialized
+[12:29:03.709][INF] Enumerated 3 mouse devices
+[12:29:03.709][INF] Added cursor 0: 6&1e6de2a3&0&0000
+[12:29:03.709][INF] Added cursor 1: 7&2c1476b9&0&0000
+[12:29:03.710][INF] Added cursor 2: 7&27169373&0&0000
+[12:29:03.710][INF] State: 0 -> 1
+[12:29:03.710][INF] Raw input device arrived
+[12:29:03.711][INF] Enumerated 3 mouse devices
+[12:29:03.711][INF] Raw input device arrived
+[12:29:03.712][INF] Enumerated 3 mouse devices
+[12:29:03.713][INF] Raw input device arrived
+[12:29:03.713][INF] MultiCursor initialized, entering message loop
+[12:29:03.713][INF] Enumerated 3 mouse devices
+[12:29:03.722][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[12:29:03.722][INF] Creating swap chain for composition
+[12:29:03.724][INF] Swap chain created successfully (5760x2160)
+[12:29:03.724][INF] Swap chain fallback successful
+[12:29:19.861][INF] MultiCursor shutting down
+[12:29:19.861][INF] State: 1 -> 5
+[12:29:19.873][INF] Render thread stopped
+[12:29:19.874][INF] MultiCursor exited
+[12:29:26.351][INF] MultiCursor starting...
+[12:29:26.360][INF] MainWindow initialized
+[12:29:26.361][INF] SettingsWindow initialized
+[12:29:26.379][INF] WindowManager initialized
+[12:29:26.441][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[12:29:26.442][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[12:29:26.442][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[12:29:26.450][INF] Render thread started
+[12:29:26.452][INF] RawInputHandler initialized
+[12:29:26.453][INF] Enumerated 3 mouse devices
+[12:29:26.453][INF] Added cursor 0: 6&1e6de2a3&0&0000
+[12:29:26.453][INF] Added cursor 1: 7&2c1476b9&0&0000
+[12:29:26.453][INF] Added cursor 2: 7&27169373&0&0000
+[12:29:26.453][INF] State: 0 -> 1
+[12:29:26.453][INF] Raw input device arrived
+[12:29:26.454][INF] Enumerated 3 mouse devices
+[12:29:26.454][INF] Raw input device arrived
+[12:29:26.456][INF] Enumerated 3 mouse devices
+[12:29:26.456][INF] MultiCursor initialized, entering message loop
+[12:29:26.456][INF] Raw input device arrived
+[12:29:26.457][INF] Enumerated 3 mouse devices
+[12:29:26.462][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[12:29:26.462][INF] Creating swap chain for composition
+[12:29:26.464][INF] Swap chain created successfully (5760x2160)
+[12:29:26.464][INF] Swap chain fallback successful
+[12:29:29.620][INF] MultiCursor shutting down
+[12:29:29.620][INF] State: 1 -> 5
+[12:29:29.633][INF] Render thread stopped
+[12:29:29.633][INF] MultiCursor exited
+[12:29:32.161][INF] MultiCursor starting...
+[12:29:32.170][INF] MainWindow initialized
+[12:29:32.171][INF] SettingsWindow initialized
+[12:29:32.189][INF] WindowManager initialized
+[12:29:32.250][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[12:29:32.251][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[12:29:32.251][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[12:29:32.258][INF] Render thread started
+[12:29:32.261][INF] RawInputHandler initialized
+[12:29:32.261][INF] Enumerated 3 mouse devices
+[12:29:32.261][INF] Added cursor 0: 6&1e6de2a3&0&0000
+[12:29:32.261][INF] Added cursor 1: 7&2c1476b9&0&0000
+[12:29:32.261][INF] Added cursor 2: 7&27169373&0&0000
+[12:29:32.261][INF] State: 0 -> 1
+[12:29:32.261][INF] Raw input device arrived
+[12:29:32.262][INF] Enumerated 3 mouse devices
+[12:29:32.262][INF] Raw input device arrived
+[12:29:32.264][INF] Enumerated 3 mouse devices
+[12:29:32.264][INF] MultiCursor initialized, entering message loop
+[12:29:32.264][INF] Raw input device arrived
+[12:29:32.264][INF] Enumerated 3 mouse devices
+[12:29:32.268][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[12:29:32.268][INF] Creating swap chain for composition
+[12:29:32.270][INF] Swap chain created successfully (5760x2160)
+[12:29:32.270][INF] Swap chain fallback successful
+[12:29:36.412][INF] MultiCursor shutting down
+[12:29:36.412][INF] State: 1 -> 5
+[12:29:36.423][INF] Render thread stopped
+[12:29:36.423][INF] MultiCursor exited
+[12:29:48.087][INF] MultiCursor starting...
+[12:29:48.098][INF] MainWindow initialized
+[12:29:48.099][INF] SettingsWindow initialized
+[12:29:48.121][INF] WindowManager initialized
+[12:29:48.198][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[12:29:48.199][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[12:29:48.199][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[12:29:48.207][INF] Render thread started
+[12:29:48.209][INF] RawInputHandler initialized
+[12:29:48.210][INF] Enumerated 3 mouse devices
+[12:29:48.210][INF] Added cursor 0: 6&1e6de2a3&0&0000
+[12:29:48.210][INF] Added cursor 1: 7&2c1476b9&0&0000
+[12:29:48.210][INF] Added cursor 2: 7&27169373&0&0000
+[12:29:48.210][INF] State: 0 -> 1
+[12:29:48.210][INF] Raw input device arrived
+[12:29:48.211][INF] Enumerated 3 mouse devices
+[12:29:48.211][INF] Raw input device arrived
+[12:29:48.212][INF] Enumerated 3 mouse devices
+[12:29:48.213][INF] Raw input device arrived
+[12:29:48.214][INF] Enumerated 3 mouse devices
+[12:29:48.214][INF] MultiCursor initialized, entering message loop
+[12:29:48.217][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[12:29:48.217][INF] Creating swap chain for composition
+[12:29:48.220][INF] Swap chain created successfully (5760x2160)
+[12:29:48.220][INF] Swap chain fallback successful
+[12:30:27.222][INF] MultiCursor shutting down
+[12:30:27.223][INF] State: 1 -> 5
+[12:30:27.226][INF] Render thread stopped
+[12:30:27.229][INF] MultiCursor exited
+[12:38:08.828][INF] MultiCursor starting...
+[12:38:08.839][INF] MainWindow initialized
+[12:38:08.840][INF] SettingsWindow initialized
+[12:38:08.860][INF] WindowManager initialized
+[12:38:08.935][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[12:38:08.936][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[12:38:08.936][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[12:38:08.943][INF] Render thread started
+[12:38:08.944][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[12:38:08.944][INF] Creating swap chain for composition
+[12:38:08.947][INF] RawInputHandler initialized
+[12:38:08.947][INF] Swap chain created successfully (5760x2160)
+[12:38:08.947][INF] Swap chain fallback successful
+[12:38:08.948][INF] Enumerated 3 mouse devices
+[12:38:08.948][INF] Added cursor 0: 6&1e6de2a3&0&0000
+[12:38:08.948][INF] Added cursor 1: 7&2c1476b9&0&0000
+[12:38:08.948][INF] Added cursor 2: 7&27169373&0&0000
+[12:38:08.948][INF] State: 0 -> 1
+[12:38:08.948][INF] Raw input device arrived
+[12:38:08.950][INF] Enumerated 3 mouse devices
+[12:38:08.950][INF] Raw input device arrived
+[12:38:08.951][INF] Enumerated 3 mouse devices
+[12:38:08.951][INF] Raw input device arrived
+[12:38:08.952][INF] Enumerated 3 mouse devices
+[12:38:08.952][INF] MultiCursor initialized, entering message loop
+[12:38:34.429][INF] MultiCursor shutting down
+[12:38:34.429][INF] State: 1 -> 5
+[12:38:34.438][INF] Render thread stopped
+[12:38:34.438][INF] MultiCursor exited
+[12:46:58.498][INF] MultiCursor starting...
+[12:46:58.509][INF] MainWindow initialized
+[12:46:58.510][INF] SettingsWindow initialized
+[12:46:58.530][INF] WindowManager initialized
+[12:46:58.599][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[12:46:58.600][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[12:46:58.600][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[12:46:58.608][INF] Render thread started
+[12:46:58.610][INF] RawInputHandler initialized
+[12:46:58.611][INF] Enumerated 3 mouse devices
+[12:46:58.611][INF] Added cursor 0: 6&1e6de2a3&0&0000
+[12:46:58.611][INF] Added cursor 1: 7&2c1476b9&0&0000
+[12:46:58.611][INF] Added cursor 2: 7&27169373&0&0000
+[12:46:58.611][INF] State: 0 -> 1
+[12:46:58.611][INF] Raw input device arrived
+[12:46:58.612][INF] Enumerated 3 mouse devices
+[12:46:58.612][INF] Raw input device arrived
+[12:46:58.613][INF] Enumerated 3 mouse devices
+[12:46:58.613][INF] Raw input device arrived
+[12:46:58.614][INF] Enumerated 3 mouse devices
+[12:46:58.616][INF] MultiCursor initialized, entering message loop
+[12:46:58.617][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[12:46:58.617][INF] Creating swap chain for composition
+[12:46:58.619][INF] Swap chain created successfully (5760x2160)
+[12:46:58.619][INF] Swap chain fallback successful
+[12:46:58.621][ERR] D2D EndDraw failed: 0x88990001
+[12:56:49.322][INF] MultiCursor shutting down
+[12:56:49.322][INF] State: 1 -> 5
+[12:56:49.337][INF] Render thread stopped
+[12:56:49.337][INF] MultiCursor exited

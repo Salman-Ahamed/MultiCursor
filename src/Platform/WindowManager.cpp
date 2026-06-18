@@ -52,14 +52,14 @@ bool WindowManager::CreateOverlayWindow() {
         L"MultiCursorOverlay", L"MultiCursor",
         WS_POPUP,
         vx, vy, vw, vh,
-        nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+        nullptr, nullptr, GetModuleHandleW(nullptr), this);
 
     if (!m_hwnd) {
         LOG_ERROR(L"Failed to create overlay window: %d", GetLastError());
         return false;
     }
 
-    SetWindowLongPtrW(m_hwnd, GWLP_USERDATA, (LONG_PTR)this);
+    // GWLP_USERDATA set in WM_NCCREATE via CREATESTRUCT.lpCreateParams
     ShowWindow(m_hwnd, SW_SHOW);
     UpdateWindow(m_hwnd);
 
@@ -138,6 +138,12 @@ void WindowManager::HandlePowerBroadcast(WPARAM wParam) {
 }
 
 LRESULT CALLBACK WindowManager::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_NCCREATE) {
+        CREATESTRUCT* cs = (CREATESTRUCT*)lParam;
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams);
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
     auto* self = (WindowManager*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     switch (msg) {

@@ -45,6 +45,14 @@ enum class DeviceType {
     Other
 };
 
+enum class MouseButton {
+    Left = 0,
+    Right,
+    Middle,
+    XButton1,
+    XButton2
+};
+
 enum class Severity {
     Debug,
     Info,
@@ -100,11 +108,47 @@ struct DeviceEvent {
     DeviceInfo device;
 };
 
+struct CursorEvent {
+    enum Type { Moved, ButtonDown, ButtonUp, ScrollChanged, ColorChanged, LabelChanged, VisibilityChanged };
+    Type type;
+    UINT cursorId;
+    int x, y;
+    int button;
+    std::wstring label;
+    DWORD color;
+    bool visible;
+};
+
 struct ErrorEvent {
     enum Source { Input, Render, Device, Config };
     Source source;
     HRESULT hr;
     std::wstring message;
+};
+
+struct CursorProfile {
+    DWORD color = 0xFFE6194B;
+    std::wstring label;
+    float cursorSize = 12.0f;
+    float opacity = 0.8f;
+    float speedMultiplier = 1.0f;
+    bool swapButtons = false;
+    bool reverseScroll = false;
+    int scrollLines = 3;
+    bool snapToDefault = false;
+    bool enhancePrecision = false;
+    int doubleClickSpeed = 500;
+    bool clickLock = false;
+    std::wstring monitorBinding;
+};
+
+struct AppSettings {
+    bool overlayEnabled = true;
+    bool showLabels = true;
+    float globalOpacity = 0.8f;
+    int logLevel = 1;
+    bool startWithWindows = false;
+    bool minimizeToTray = true;
 };
 
 constexpr DWORD kCursorColors[] = {
