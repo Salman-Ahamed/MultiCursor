@@ -3,7 +3,9 @@
 #include "Core/Types.h"
 #include "Core/CursorManager.h"
 #include "Core/InputManager.h"
-#include "Core/DeviceManager.h"
+#include "Core/SettingsManager.h"
+#include "Core/AppStateMachine.h"
+
 #include "Direct2DRenderer.h"
 #include <atomic>
 #include <thread>
@@ -11,11 +13,14 @@
 class OverlayRenderer {
 public:
     OverlayRenderer(Direct2DRenderer& renderer, CursorManager& cursorMgr,
-                    InputManager& inputMgr, DeviceManager& devMgr);
+                    InputManager& inputMgr,
+                    SettingsManager& settings, AppStateMachine& stateMachine);
     ~OverlayRenderer();
 
     void Start();
     void Stop();
+    void Suspend() { m_suspended.store(true); }
+    void Resume() { m_suspended.store(false); }
     bool IsRunning() const { return m_running.load(); }
 
 private:
@@ -27,10 +32,12 @@ private:
     Direct2DRenderer& m_renderer;
     CursorManager& m_cursorMgr;
     InputManager& m_inputMgr;
-    DeviceManager& m_devMgr;
+    SettingsManager& m_settings;
+    AppStateMachine& m_stateMachine;
 
     std::thread m_thread;
     std::atomic<bool> m_running{ false };
+    std::atomic<bool> m_suspended{ false };
 
     // Frame pacing
     using PFN_DCompositionWaitForCompositorClock = DWORD(WINAPI*)(UINT, const HANDLE*, DWORD);

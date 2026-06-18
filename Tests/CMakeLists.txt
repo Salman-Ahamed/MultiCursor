@@ -1,15 +1,21 @@
-find_package(GTest CONFIG QUIET)
-if(NOT GTest_FOUND)
-    find_package(GTest QUIET)
-endif()
+set(TEST_SOURCES
+    test_main.cpp
+    minitest.h
+    EventBusTest.cpp
+    AppStateMachineTest.cpp
+    SettingsManagerTest.cpp
+    InputManagerTest.cpp
+)
 
-if(GTest_FOUND)
-    add_executable(MultiCursorTests
-        test_main.cpp
-    )
-    target_include_directories(MultiCursorTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_link_libraries(MultiCursorTests PRIVATE GTest::GTest GTest::Main)
-    add_test(NAME MultiCursorTests COMMAND MultiCursorTests)
-else()
-    message(STATUS "GTest not found - tests disabled. Install Google Test or set GTEST_ROOT.")
-endif()
+# Source files from main project (excluding GPU/UI/Platform files not needed for tests)
+set(PROJECT_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/Core/SettingsManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/Core/AppStateMachine.cpp
+    ${CMAKE_SOURCE_DIR}/src/Core/InputManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/Core/Logger.cpp
+)
+
+add_executable(MultiCursorTests ${TEST_SOURCES} ${PROJECT_SOURCES})
+target_include_directories(MultiCursorTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(MultiCursorTests PRIVATE user32.lib hid.lib ole32.lib oleaut32.lib)
+add_test(NAME MultiCursorTests COMMAND MultiCursorTests)

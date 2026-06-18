@@ -5,10 +5,10 @@ D:\codes\work\org\Multi-Mouse-Detection\src\Core\AppStateMachine.cpp;D:\codes\wo
 D:\codes\work\org\Multi-Mouse-Detection\src\Core\DeviceManager.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\DeviceManager.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\Core\InputManager.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\InputManager.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\Core\CursorManager.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\CursorManager.obj
+D:\codes\work\org\Multi-Mouse-Detection\src\Core\ClickForwarder.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\ClickForwarder.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\Platform\RawInputHandler.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\RawInputHandler.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\Platform\WindowManager.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\WindowManager.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\Direct2DRenderer.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\Direct2DRenderer.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\OverlayRenderer.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\OverlayRenderer.obj
-D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\CursorRenderer.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\CursorRenderer.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\UI\MainWindow.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\MainWindow.obj
 D:\codes\work\org\Multi-Mouse-Detection\src\UI\SettingsWindow.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\src\MultiCursor.dir\RelWithDebInfo\SettingsWindow.obj

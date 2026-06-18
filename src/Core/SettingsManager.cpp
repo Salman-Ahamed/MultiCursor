@@ -123,7 +123,11 @@ bool SettingsManager::Parse(const std::string& json) {
             char* end = nullptr;
             double d = strtod(json.c_str() + pos, &end);
             if (end == json.c_str() + pos) return false;
-            if (d == (int)d && json.find('.') == std::string::npos) {
+            bool isInt = (d == (int)d);
+            for (const char* p = json.c_str() + pos; p < end; p++) {
+                if (*p == '.') { isInt = false; break; }
+            }
+            if (isInt) {
                 Value v; v.type = Value::Int; v.i = (int)d;
                 m_values[key] = v;
             } else {

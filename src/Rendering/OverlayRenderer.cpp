@@ -1,13 +1,16 @@
 #include "OverlayRenderer.h"
 #include "Core/Logger.h"
+#include "Core/ClickForwarder.h"
 #include <chrono>
 #include <algorithm>
 
 using namespace std::chrono;
 
 OverlayRenderer::OverlayRenderer(Direct2DRenderer& renderer, CursorManager& cursorMgr,
-                                 InputManager& inputMgr, DeviceManager& devMgr)
-    : m_renderer(renderer), m_cursorMgr(cursorMgr), m_inputMgr(inputMgr), m_devMgr(devMgr) {
+                                 InputManager& inputMgr,
+                                 SettingsManager& settings, AppStateMachine& stateMachine)
+    : m_renderer(renderer), m_cursorMgr(cursorMgr), m_inputMgr(inputMgr),
+      m_settings(settings), m_stateMachine(stateMachine) {
 
     HMODULE dcomp = LoadLibraryExW(L"dcomp.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (dcomp) {
@@ -39,6 +42,7 @@ void OverlayRenderer::Stop() {
 }
 
 void OverlayRenderer::RenderLoop() {
+    SetThreadDescription(GetCurrentThread(), L"MultiCursor Render");
     m_lastStatTime = GetTickCount64();
     m_frameCount = 0;
 
@@ -46,6 +50,10 @@ void OverlayRenderer::RenderLoop() {
     std::vector<RippleState> ripples;
 
     while (m_running.load()) {
+        if (m_suspended.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+        }
         WaitForFramePacing();
         LateInputSample();
 
@@ -54,6 +62,13 @@ void OverlayRenderer::RenderLoop() {
 
         POINT offset = {};
         if (!m_renderer.BeginDraw(dirtyRect, offset)) {
+            LOG_WARN(L"BeginDraw failed, attempting device recovery");
+            if (m_renderer.Recreate()) {
+                LOG_INFO(L"Device chain recovered successfully");
+                m_stateMachine.TransitionTo(AppState::DeviceLost);
+                m_stateMachine.TransitionTo(AppState::Recovering);
+                continue;
+            }
             Sleep(100);
             continue;
         }
@@ -63,6 +78,12 @@ void OverlayRenderer::RenderLoop() {
         m_cursorMgr.SnapshotRipples(ripples);
 
         auto* dc = m_renderer.D2DContext();
+        auto* dwriteFactory = m_renderer.DWriteFactory();
+
+        // Read current settings
+        float cursorRadius = (float)m_settings.GetInt("cursor_size", 12);
+        float cursorOpacity = m_settings.GetFloat("cursor_opacity", 0.8f);
+        bool showLabels = m_settings.GetBool("show_labels", true);
 
         // Clear dirty rect to transparent
         D2D1_RECT_F clipRect = D2D1::RectF(
@@ -82,7 +103,7 @@ void OverlayRenderer::RenderLoop() {
             color.r = ((cursor.color >> 16) & 0xFF) / 255.0f;
             color.g = ((cursor.color >> 8) & 0xFF) / 255.0f;
             color.b = (cursor.color & 0xFF) / 255.0f;
-            color.a = 0.8f;
+            color.a = cursorOpacity;
 
             ComPtr<ID2D1SolidColorBrush> brush;
             dc->CreateSolidColorBrush(color, &brush);
@@ -90,7 +111,7 @@ void OverlayRenderer::RenderLoop() {
 
             D2D1_ELLIPSE ellipse = D2D1::Ellipse(
                 D2D1::Point2F((FLOAT)cursor.pos.x, (FLOAT)cursor.pos.y),
-                kCursorRadius, kCursorRadius);
+                cursorRadius, cursorRadius);
 
             dc->FillEllipse(ellipse, brush.Get());
 
@@ -99,6 +120,30 @@ void OverlayRenderer::RenderLoop() {
             dc->CreateSolidColorBrush(outlineColor, &outlineBrush);
             if (outlineBrush) {
                 dc->DrawEllipse(ellipse, outlineBrush.Get(), 1.5f);
+            }
+
+            // Draw label if enabled
+            if (showLabels && !cursor.label.empty() && dwriteFactory) {
+                ComPtr<IDWriteTextFormat> textFormat;
+                dwriteFactory->CreateTextFormat(
+                    L"Segoe UI", nullptr,
+                    DWRITE_FONT_WEIGHT_NORMAL,
+                    DWRITE_FONT_STYLE_NORMAL,
+                    DWRITE_FONT_STRETCH_NORMAL,
+                    11.0f, L"en-US", &textFormat);
+                if (textFormat) {
+                    textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+                    textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+                    static_cast<ID2D1RenderTarget*>(dc)->DrawTextW(
+                        cursor.label.c_str(), (UINT32)cursor.label.size(),
+                        textFormat.Get(),
+                        D2D1::RectF(
+                            (FLOAT)cursor.pos.x - 50,
+                            (FLOAT)cursor.pos.y + cursorRadius + 2,
+                            (FLOAT)cursor.pos.x + 50,
+                            (FLOAT)cursor.pos.y + cursorRadius + 18),
+                        brush.Get());
+                }
             }
         }
 
@@ -152,10 +197,21 @@ void OverlayRenderer::LateInputSample() {
         auto& state = frame.state;
         m_cursorMgr.UpdatePosition(cursorIdx, state.dx, state.dy, state.absolute, state.lx, state.ly);
 
+        auto* cursor = m_cursorMgr.GetCursor(cursorIdx);
+        if (!cursor) continue;
+
+        POINT cursorPos = cursor->pos;
+
         if (state.buttonFlags & (RI_MOUSE_BUTTON_1_DOWN | RI_MOUSE_BUTTON_2_DOWN |
-                                 RI_MOUSE_BUTTON_3_DOWN)) {
-            auto* cursor = m_cursorMgr.GetCursor(cursorIdx);
-            if (cursor) m_cursorMgr.TriggerRipple(cursor->pos);
+                                 RI_MOUSE_BUTTON_3_DOWN | RI_MOUSE_BUTTON_4_DOWN |
+                                 RI_MOUSE_BUTTON_5_DOWN)) {
+            m_cursorMgr.TriggerRipple(cursorPos);
+            ClickForwarder::ForwardButtonDown(cursorPos, state.buttonFlags);
+        }
+        if (state.buttonFlags & (RI_MOUSE_BUTTON_1_UP | RI_MOUSE_BUTTON_2_UP |
+                                 RI_MOUSE_BUTTON_3_UP | RI_MOUSE_BUTTON_4_UP |
+                                 RI_MOUSE_BUTTON_5_UP)) {
+            ClickForwarder::ForwardButtonUp(cursorPos, state.buttonFlags);
         }
     }
 }

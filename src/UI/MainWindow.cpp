@@ -1,8 +1,7 @@
 #include "MainWindow.h"
+#include "SettingsWindow.h"
 #include "Core/Logger.h"
 #include <commctrl.h>
-
-#pragma comment(lib, "comctl32.lib")
 
 MainWindow* MainWindow::s_instance = nullptr;
 
@@ -26,7 +25,7 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
-    wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    wc.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(101));
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wc.lpszClassName = L"MultiCursorMainWindow";
@@ -96,6 +95,50 @@ void MainWindow::OnCreate() {
                                   m_hwnd, (HMENU)1002, m_hInstance, nullptr);
 }
 
+void MainWindow::OnDeviceListUpdate() {
+    RefreshDeviceList();
+}
+
+void MainWindow::RefreshDeviceList() {
+    if (!m_deviceList || !m_deviceMgr) return;
+
+    ListView_DeleteAllItems(m_deviceList);
+
+    const auto& devices = m_deviceMgr->Devices();
+    for (size_t i = 0; i < devices.size(); i++) {
+        auto& dev = devices[i];
+        if (!dev.isMouse) continue;
+
+        wchar_t label[256];
+        auto hashPos = dev.name.find_last_of(L'#');
+        if (hashPos != std::wstring::npos) {
+            auto colPos = dev.name.rfind(L'#', hashPos - 1);
+            if (colPos != std::wstring::npos && colPos + 1 < dev.name.size()) {
+                wcsncpy_s(label, dev.name.c_str() + colPos + 1, hashPos - colPos - 1);
+                label[hashPos - colPos - 1] = 0;
+            } else {
+                wcsncpy_s(label, dev.name.c_str(), hashPos);
+                label[hashPos] = 0;
+            }
+        } else {
+            wcsncpy_s(label, dev.name.c_str(), _TRUNCATE);
+        }
+
+        LVITEMW item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = (int)i;
+        item.pszText = label;
+        item.lParam = (LPARAM)dev.hDevice;
+        int idx = ListView_InsertItem(m_deviceList, &item);
+
+        if (idx >= 0) {
+            ListView_SetItemText(m_deviceList, idx, 1, (LPWSTR)L"Active");
+            wchar_t buf[16]; swprintf_s(buf, L"%zu", i + 1);
+            ListView_SetItemText(m_deviceList, idx, 2, buf);
+        }
+    }
+}
+
 LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     auto* self = (MainWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
@@ -116,6 +159,9 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
     case WM_COMMAND:
         if (LOWORD(wParam) == 1001) {
             LOG_INFO(L"Settings button clicked");
+            if (self && self->m_settingsWindow) {
+                self->m_settingsWindow->Show();
+            }
         } else if (LOWORD(wParam) == 1002) {
             DestroyWindow(hwnd);
         }
@@ -123,6 +169,10 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
     case WM_DESTROY:
         PostQuitMessage(0);
+        return 0;
+
+    case WM_APP + 2:
+        if (self) self->RefreshDeviceList();
         return 0;
     }
 

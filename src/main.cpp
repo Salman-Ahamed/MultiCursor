@@ -13,13 +13,14 @@
 #include "UI/SettingsWindow.h"
 
 #include <thread>
+#include <atomic>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <dbghelp.h>
 
 #pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "dbghelp.lib")
+#pragma comment(linker, "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 namespace {
     HINSTANCE g_hInstance = nullptr;
@@ -38,7 +39,7 @@ namespace {
     std::unique_ptr<SettingsWindow> g_settingsWindow;
     std::thread g_inputThread;
     NOTIFYICONDATAW g_trayIcon = {};
-    bool g_running = true;
+    std::atomic<bool> g_running{ true };
     std::wstring g_logDir;
 }
 
@@ -62,6 +63,7 @@ LONG WINAPI CrashHandler(EXCEPTION_POINTERS* exc) {
 }
 
 void InputThreadProc() {
+    SetThreadDescription(GetCurrentThread(), L"MultiCursor Input");
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     if (!g_rawInput->Initialize()) {
@@ -71,6 +73,34 @@ void InputThreadProc() {
     }
 
     g_deviceMgr->Enumerate();
+
+    // Refresh main window device list on UI thread
+    PostMessageW(g_mainWindow->Handle(), WM_APP + 2, 0, 0);
+
+    // Subscribe to device events for hot-plug updates
+    auto deviceSub = g_deviceBus.Subscribe([](const DeviceEvent& e) {
+        // Notify main window (on UI thread via PostMessage)
+        PostMessageW(g_mainWindow->Handle(), WM_APP + 2, 0, 0);
+
+        // Add cursors for any new devices
+        for (auto& dev : g_deviceMgr->Devices()) {
+            if (!dev.isMouse) continue;
+            UINT existingIdx = g_cursorMgr->LookupCursor(dev.hDevice);
+            if (existingIdx == (UINT)-1) {
+                auto label = dev.name;
+                auto hashPos = label.find_last_of(L'#');
+                if (hashPos != std::wstring::npos) {
+                    auto colPos = label.rfind(L'#', hashPos - 1);
+                    if (colPos != std::wstring::npos && colPos + 1 < label.size()) {
+                        label = label.substr(colPos + 1, hashPos - colPos - 1);
+                    } else {
+                        label = label.substr(0, hashPos);
+                    }
+                }
+                g_cursorMgr->AddCursor(dev.hDevice, label);
+            }
+        }
+    });
 
     // Add cursors for all detected mouse devices
     for (auto& dev : g_deviceMgr->Devices()) {
@@ -91,8 +121,11 @@ void InputThreadProc() {
 
     g_stateMachine.TransitionTo(AppState::Running);
 
-    MSG msg;
-    while (g_running && GetMessage(&msg, nullptr, 0, 0)) {
+    MSG msg = {};
+    while (g_running.load()) {
+        BOOL ret = GetMessage(&msg, nullptr, 0, 0);
+        if (ret <= 0) break;
+        if (!g_running.load()) break;
         if (!g_rawInput->ProcessMessage(msg)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -116,13 +149,29 @@ void InitTrayIcon(HWND hwnd) {
     g_trayIcon.uID = 1;
     g_trayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     g_trayIcon.uCallbackMessage = WM_APP + 1;
-    g_trayIcon.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    g_trayIcon.hIcon = LoadIconW(g_hInstance, MAKEINTRESOURCE(101));
     wcscpy_s(g_trayIcon.szTip, L"MultiCursor");
     Shell_NotifyIconW(NIM_ADD, &g_trayIcon);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     g_hInstance = hInstance;
+
+    // Check for restart flag
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    bool isRestart = false;
+    for (int i = 1; i < argc; i++) {
+        if (wcscmp(argv[i], L"-restart") == 0) {
+            isRestart = true;
+            break;
+        }
+    }
+    LocalFree(argv);
+
+    if (isRestart) {
+        LOG_INFO(L"Restarted after previous crash");
+    }
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     SetUnhandledExceptionFilter(CrashHandler);
@@ -152,10 +201,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     }
 
     g_settingsWindow = std::make_unique<SettingsWindow>();
-    g_settingsWindow->Initialize(hInstance, g_mainWindow->Handle());
+    g_settingsWindow->Initialize(hInstance, g_mainWindow->Handle(), g_settings);
+    g_mainWindow->SetSettingsWindow(g_settingsWindow.get());
 
     // Initialize overlay window
-    g_windowMgr = std::make_unique<WindowManager>();
+    g_windowMgr = std::make_unique<WindowManager>(g_stateMachine);
+    g_windowMgr->SetDisplayChangeCallback([](int w, int h) {
+        if (g_renderer) g_renderer->ResizeSurface(w, h);
+    });
     if (!g_windowMgr->Initialize()) {
         LOG_ERROR(L"Failed to initialize WindowManager");
         return 1;
@@ -174,11 +227,49 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     g_cursorMgr = std::make_unique<CursorManager>(g_deviceBus);
     g_rawInput = std::make_unique<RawInputHandler>(*g_inputMgr, *g_deviceMgr);
 
-    // Create overlay renderer
-    g_overlay = std::make_unique<OverlayRenderer>(*g_renderer, *g_cursorMgr, *g_inputMgr, *g_deviceMgr);
+    // Wire device manager to main window
+    g_mainWindow->SetDeviceManager(g_deviceMgr.get());
 
-    // Register app restart
+    // Create overlay renderer
+    g_overlay = std::make_unique<OverlayRenderer>(*g_renderer, *g_cursorMgr, *g_inputMgr,
+                                                   g_settings, g_stateMachine);
+
+    // Wire error event bus
+    g_errorBus.Subscribe([](const ErrorEvent& e) {
+        LOG_ERROR(L"[ErrorEvent] source=%d hr=0x%08X msg=%s",
+                  (int)e.source, e.hr, e.message.c_str());
+    });
     RegisterApplicationRestart(L"-restart", RESTART_NO_CRASH | RESTART_NO_HANG);
+
+    // Wire state machine transitions
+    g_stateMachine.OnTransition([](AppState from, AppState to) {
+        LOG_INFO(L"State: %d -> %d", (int)from, (int)to);
+        if (from == AppState::DeviceLost && to == AppState::Recovering) {
+            LOG_INFO(L"Attempting device recovery...");
+            // Re-enumerate devices and re-add cursors (Recreate already done by render loop)
+            if (g_deviceMgr) g_deviceMgr->Enumerate();
+            if (g_cursorMgr && g_deviceMgr) {
+                for (auto& dev : g_deviceMgr->Devices()) {
+                    if (dev.isMouse) {
+                        UINT existingIdx = g_cursorMgr->LookupCursor(dev.hDevice);
+                        if (existingIdx == (UINT)-1) {
+                            g_cursorMgr->AddCursor(dev.hDevice, dev.name);
+                        }
+                    }
+                }
+            }
+            LOG_INFO(L"Device recovery successful");
+            g_stateMachine.TransitionTo(AppState::Running);
+        }
+        if (to == AppState::Suspended) {
+            if (g_windowMgr) g_windowMgr->Hide();
+            if (g_overlay) g_overlay->Suspend();
+        }
+        if (to == AppState::Running && from == AppState::Suspended) {
+            if (g_overlay) g_overlay->Resume();
+            if (g_windowMgr && g_windowMgr->IsOverlayEnabled()) g_windowMgr->Show();
+        }
+    });
 
     // System tray icon
     InitTrayIcon(g_mainWindow->Handle());
@@ -199,8 +290,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     LOG_INFO(L"MultiCursor initialized, entering message loop");
 
     // Main message loop
-    MSG msg;
-    while (GetMessage(&msg, nullptr, 0, 0)) {
+    MSG msg = {};
+    while (GetMessage(&msg, nullptr, 0, 0) > 0) {
         if (msg.message == WM_APP + 1) {
             switch (msg.lParam) {
             case WM_LBUTTONDBLCLK:
@@ -225,9 +316,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     // Shutdown
     LOG_INFO(L"MultiCursor shutting down");
-    g_running = false;
-    g_stateMachine.TransitionTo(AppState::ShuttingDown);
+    g_running.store(false);
 
+    // Wake input thread from GetMessage so it can exit & self-cleanup
+    if (g_rawInput) {
+        HWND hwnd = g_rawInput->WindowHandle();
+        if (hwnd) PostMessageW(hwnd, WM_NULL, 0, 0);
+    }
+
+    g_stateMachine.TransitionTo(AppState::ShuttingDown);
     g_overlay->Stop();
     if (g_inputThread.joinable()) g_inputThread.join();
 

@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <unordered_set>
 #include <winternl.h>
 #include <hidusage.h>
 #include <hidpi.h>
@@ -10,6 +11,71 @@
 #pragma comment(lib, "hid.lib")
 
 bool DeviceManager::Enumerate() {
+    bool shouldPublish = false;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!EnumerateUnlocked()) return false;
+        shouldPublish = !m_firstEnum;
+        m_firstEnum = false;
+    }
+    if (shouldPublish) {
+        DeviceEvent ev{ DeviceEvent::Changed, {} };
+        m_eventBus.Publish(ev);
+    }
+    return true;
+}
+
+bool DeviceManager::OnDeviceArrival() {
+    return Enumerate();
+}
+
+bool DeviceManager::OnDeviceRemoval() {
+    // Snapshot current device handles before enumeration
+    std::vector<std::pair<HANDLE, DeviceInfo>> oldDevices;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto& d : m_devices) oldDevices.push_back({d.hDevice, d});
+    }
+
+    if (!Enumerate()) return false;
+
+    // Build set of current handles after enumeration
+    std::unordered_set<HANDLE> currentHandles;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto& d : m_devices) currentHandles.insert(d.hDevice);
+    }
+
+    // Publish Removed events for devices no longer present
+    for (auto& [h, info] : oldDevices) {
+        if (currentHandles.find(h) == currentHandles.end()) {
+            DeviceEvent ev{ DeviceEvent::Removed, info };
+            m_eventBus.Publish(ev);
+        }
+    }
+
+    return true;
+}
+
+const DeviceInfo* DeviceManager::GetDevice(HANDLE hDevice) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_deviceMap.find(hDevice);
+    if (it != m_deviceMap.end())
+        return &m_devices[it->second];
+    return nullptr;
+}
+
+const std::vector<DeviceInfo>& DeviceManager::Devices() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_devices;
+}
+
+UINT DeviceManager::DeviceCount() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return (UINT)m_devices.size();
+}
+
+bool DeviceManager::EnumerateUnlocked() {
     UINT count = 0;
     if (GetRawInputDeviceList(nullptr, &count, sizeof(RAWINPUTDEVICELIST)) == (UINT)-1) {
         LOG_ERROR(L"GetRawInputDeviceList failed: %d", GetLastError());
@@ -70,29 +136,8 @@ bool DeviceManager::Enumerate() {
         }
     }
 
-    if (!m_firstEnum) {
-        DeviceEvent ev{ DeviceEvent::Changed, {} };
-        m_eventBus.Publish(ev);
-    }
-    m_firstEnum = false;
-
     LOG_INFO(L"Enumerated %zu mouse devices", m_devices.size());
     return true;
-}
-
-bool DeviceManager::OnDeviceArrival() {
-    return Enumerate();
-}
-
-bool DeviceManager::OnDeviceRemoval() {
-    return Enumerate();
-}
-
-const DeviceInfo* DeviceManager::GetDevice(HANDLE hDevice) const {
-    auto it = m_deviceMap.find(hDevice);
-    if (it != m_deviceMap.end())
-        return &m_devices[it->second];
-    return nullptr;
 }
 
 bool DeviceManager::ClassifyDevice(HANDLE hDevice, DeviceInfo& info) {

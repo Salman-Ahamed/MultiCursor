@@ -1,0 +1,9 @@
+D:\codes\work\org\Multi-Mouse-Detection\Tests\test_main.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\test_main.obj
+D:\codes\work\org\Multi-Mouse-Detection\Tests\EventBusTest.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\EventBusTest.obj
+D:\codes\work\org\Multi-Mouse-Detection\Tests\AppStateMachineTest.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\AppStateMachineTest.obj
+D:\codes\work\org\Multi-Mouse-Detection\Tests\SettingsManagerTest.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\SettingsManagerTest.obj
+D:\codes\work\org\Multi-Mouse-Detection\Tests\InputManagerTest.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\InputManagerTest.obj
+D:\codes\work\org\Multi-Mouse-Detection\src\Core\SettingsManager.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\SettingsManager.obj
+D:\codes\work\org\Multi-Mouse-Detection\src\Core\AppStateMachine.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\AppStateMachine.obj
+D:\codes\work\org\Multi-Mouse-Detection\src\Core\InputManager.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\InputManager.obj
+D:\codes\work\org\Multi-Mouse-Detection\src\Core\Logger.cpp;D:\codes\work\org\Multi-Mouse-Detection\build\Tests\MultiCursorTests.dir\RelWithDebInfo\Logger.obj

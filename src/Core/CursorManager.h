@@ -19,6 +19,7 @@ public:
     void UpdatePosition(UINT idx, LONG dx, LONG dy, bool absolute = false, LONG ax = 0, LONG ay = 0);
     void UpdateButton(UINT idx, int button, bool down);
     void TriggerRipple(POINT center);
+    void TriggerRippleUnlocked(POINT center);
 
     CursorState* GetCursor(UINT idx);
     UINT CursorCount() const { return (UINT)m_cursors.size(); }

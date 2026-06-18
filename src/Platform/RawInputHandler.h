@@ -31,8 +31,4 @@ private:
     std::vector<uint8_t> m_buffer;
 
     static RawInputHandler* s_instance;
-
-    // Thread-local flag for SendInput infinite loop prevention
-    static thread_local bool t_processingOurClick;
-    friend class ClickForwarder;
 };

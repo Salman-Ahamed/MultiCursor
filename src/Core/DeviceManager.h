@@ -4,6 +4,7 @@
 #include "EventBus.h"
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 
 class DeviceManager {
 public:
@@ -14,14 +15,16 @@ public:
     bool OnDeviceRemoval();
 
     const DeviceInfo* GetDevice(HANDLE hDevice) const;
-    const std::vector<DeviceInfo>& Devices() const { return m_devices; }
-    UINT DeviceCount() const { return (UINT)m_devices.size(); }
+    const std::vector<DeviceInfo>& Devices() const;
+    UINT DeviceCount() const;
 
 private:
+    bool EnumerateUnlocked();
     bool ClassifyDevice(HANDLE hDevice, DeviceInfo& info);
 
     std::vector<DeviceInfo> m_devices;
     std::unordered_map<HANDLE, size_t> m_deviceMap;
     DeviceEventBus& m_eventBus;
     bool m_firstEnum = true;
+    mutable std::mutex m_mutex;
 };

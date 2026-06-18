@@ -8,6 +8,9 @@
       <FullPath>D:\codes\work\org\Multi-Mouse-Detection\build\src\RelWithDebInfo\MultiCursor.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>D:\codes\work\org\Multi-Mouse-Detection\build\Tests\RelWithDebInfo\MultiCursorTests.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>D:\codes\work\org\Multi-Mouse-Detection\build\x64\RelWithDebInfo\ALL_BUILD</FullPath>
     </ProjectOutput>
   </ProjectOutputs>

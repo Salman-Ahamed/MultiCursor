@@ -8,7 +8,6 @@
 #endif
 #include <Windows.h>
 #include <d2d1_1.h>
-#include <d2d1effects.h>
 #include <dwrite.h>
 #include <dcomp.h>
 #include <dxgi1_2.h>

@@ -1,9 +1,7 @@
 #include "RawInputHandler.h"
 #include "Core/Logger.h"
-#include <set>
 
 RawInputHandler* RawInputHandler::s_instance = nullptr;
-thread_local bool RawInputHandler::t_processingOurClick = false;
 
 RawInputHandler::RawInputHandler(InputManager& inputMgr, DeviceManager& devMgr)
     : m_inputMgr(inputMgr), m_devMgr(devMgr) {
@@ -100,8 +98,6 @@ LRESULT CALLBACK RawInputHandler::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LP
 }
 
 void RawInputHandler::OnInput(WPARAM wParam, LPARAM lParam) {
-    if (t_processingOurClick) return;
-
     UINT size = (UINT)m_buffer.size();
     UINT result = GetRawInputData((HRAWINPUT)lParam, RID_INPUT,
                                    m_buffer.data(), &size, sizeof(RAWINPUTHEADER));

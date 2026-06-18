@@ -1,6 +1,6 @@
 ^D:\CODES\WORK\ORG\MULTI-MOUSE-DETECTION\BUILD\CMAKEFILES\633459AE6ABE3D7A56E5FA8D593615B2\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SD:/codes/work/org/Multi-Mouse-Detection -BD:/codes/work/org/Multi-Mouse-Detection/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/codes/work/org/Multi-Mouse-Detection/build/MultiCursor.sln
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/codes/work/org/Multi-Mouse-Detection -BD:/codes/work/org/Multi-Mouse-Detection/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/codes/work/org/Multi-Mouse-Detection/build/MultiCursor.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

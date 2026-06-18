@@ -1,12 +1,15 @@
 #include "WindowManager.h"
 #include "Core/Logger.h"
 #include <dwmapi.h>
+#include <wtsapi32.h>
 
 #pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "wtsapi32.lib")
 
 WindowManager* WindowManager::s_instance = nullptr;
 
-WindowManager::WindowManager() {
+WindowManager::WindowManager(AppStateMachine& stateMachine)
+    : m_stateMachine(stateMachine) {
     s_instance = this;
 }
 
@@ -31,6 +34,8 @@ bool WindowManager::Initialize() {
     }
 
     if (!CreateOverlayWindow()) return false;
+
+    WTSRegisterSessionNotification(m_hwnd, NOTIFY_FOR_THIS_SESSION);
 
     LOG_INFO(L"WindowManager initialized");
     return true;
@@ -66,6 +71,7 @@ bool WindowManager::CreateOverlayWindow() {
 
 void WindowManager::Shutdown() {
     if (m_hwnd) {
+        WTSUnRegisterSessionNotification(m_hwnd);
         DestroyWindow(m_hwnd);
         m_hwnd = nullptr;
     }
@@ -101,11 +107,27 @@ void WindowManager::HandleDpiChange(WPARAM wParam, LPARAM lParam) {
 }
 
 void WindowManager::HandleSessionChange(WPARAM wParam) {
-    if (wParam == WTS_SESSION_LOCK || wParam == WTS_CONSOLE_CONNECT) {
-        Hide();
-    } else if (wParam == WTS_SESSION_UNLOCK || wParam == WTS_CONSOLE_DISCONNECT) {
-        if (m_overlayEnabled) Show();
+    if (wParam == WTS_SESSION_LOCK) {
+        m_stateMachine.TransitionTo(AppState::Suspended);
+    } else if (wParam == WTS_SESSION_UNLOCK) {
+        m_stateMachine.TransitionTo(AppState::Running);
     }
+}
+
+void WindowManager::HandleDisplayChange() {
+    int vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    int vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    int vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    int vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+    LOG_INFO(L"Display changed: %dx%d (%d,%d)", vw, vh, vx, vy);
+
+    if (m_hwnd) {
+        SetWindowPos(m_hwnd, HWND_TOPMOST, vx, vy, vw, vh,
+                     SWP_NOACTIVATE | SWP_NOZORDER);
+    }
+
+    if (m_displayChangeCb) m_displayChangeCb(vw, vh);
 }
 
 void WindowManager::HandlePowerBroadcast(WPARAM wParam) {
@@ -125,6 +147,10 @@ LRESULT CALLBACK WindowManager::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
 
     case WM_WTSSESSION_CHANGE:
         if (self) self->HandleSessionChange(wParam);
+        return 0;
+
+    case WM_DISPLAYCHANGE:
+        if (self) self->HandleDisplayChange();
         return 0;
 
     case WM_POWERBROADCAST:

@@ -9,6 +9,7 @@ InputManager::InputManager() {
 
 void InputManager::ProcessInput(HANDLE hDevice, const RAWINPUT& raw) {
     UINT idx = LookupIndex(hDevice);
+    if (idx == UINT_MAX) return;
     auto& state = m_states[idx];
 
     auto& mouse = raw.data.mouse;
@@ -42,8 +43,6 @@ void InputManager::ProcessInput(HANDLE hDevice, const RAWINPUT& raw) {
     if (mouse.usButtonFlags & RI_MOUSE_HWHEEL) {
         state.wheelHDelta = (SHORT)mouse.usButtonData;
     }
-
-    state.buttonFlags = mouse.usButtonFlags;
 }
 
 UINT InputManager::LookupIndex(HANDLE hDevice) {
@@ -56,7 +55,7 @@ UINT InputManager::LookupIndex(HANDLE hDevice) {
             return i;
         }
     }
-    return 0;
+    return UINT_MAX;
 }
 
 void InputManager::Flush() {

@@ -80,11 +80,16 @@ void CursorManager::UpdateButton(UINT idx, int button, bool down) {
     m_cursors[idx].dirty = true;
 
     if (down) {
-        TriggerRipple(m_cursors[idx].pos);
+        TriggerRippleUnlocked(m_cursors[idx].pos);
     }
 }
 
 void CursorManager::TriggerRipple(POINT center) {
+    std::lock_guard lock(m_mutex);
+    TriggerRippleUnlocked(center);
+}
+
+void CursorManager::TriggerRippleUnlocked(POINT center) {
     for (auto& ripple : m_ripples) {
         if (!ripple.active) {
             ripple.center = center;
@@ -152,7 +157,15 @@ void CursorManager::OnDeviceEvent(const DeviceEvent& e) {
     if (e.type == DeviceEvent::Removed) {
         for (auto it = m_cursorMap.begin(); it != m_cursorMap.end(); ) {
             if (it->first == e.device.hDevice) {
-                ForcedButtonRelease(it->first);
+                // Inline ForcedButtonRelease to avoid re-locking m_mutex (deadlock)
+                auto& cursor = m_cursors[it->second];
+                for (int i = 0; i < 5; i++) {
+                    if (cursor.buttons[i]) {
+                        cursor.buttons[i] = false;
+                        cursor.dirty = true;
+                        LOG_WARN(L"Forced button release for cursor %u, button %d", it->second, i);
+                    }
+                }
                 m_cursors[it->second].visible = false;
                 it = m_cursorMap.erase(it);
             } else {

@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/codes/work/org/Multi-Mouse-Detection/build/cmake_install.cmake",
+		"D:/codes/work/org/Multi-Mouse-Detection/build/src/cmake_install.cmake",
+		"D:/codes/work/org/Multi-Mouse-Detection/build/Tests/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
