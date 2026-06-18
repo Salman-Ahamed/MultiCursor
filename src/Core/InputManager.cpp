@@ -15,8 +15,13 @@ void InputManager::ProcessInput(HANDLE hDevice, const RAWINPUT& raw) {
     auto& mouse = raw.data.mouse;
 
     if (mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
-        state.lx = mouse.lLastX;
-        state.ly = mouse.lLastY;
+        if (mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) {
+            state.lx = (mouse.lLastX * GetSystemMetrics(SM_CXVIRTUALSCREEN)) / 65536;
+            state.ly = (mouse.lLastY * GetSystemMetrics(SM_CYVIRTUALSCREEN)) / 65536;
+        } else {
+            state.lx = (mouse.lLastX * GetSystemMetrics(SM_CXSCREEN)) / 65536;
+            state.ly = (mouse.lLastY * GetSystemMetrics(SM_CYSCREEN)) / 65536;
+        }
         state.absolute = true;
     } else {
         state.dx = mouse.lLastX;

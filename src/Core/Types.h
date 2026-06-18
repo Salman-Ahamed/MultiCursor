@@ -25,7 +25,7 @@ constexpr UINT kSendInputMagic = 0x4D430001;
 constexpr UINT kMaxRipples = 64;
 constexpr float kCursorRadius = 12.0f;
 constexpr float kRippleMaxRadius = 40.0f;
-constexpr float kRippleDurationMs = 300.0f;
+constexpr float kRippleDurationMs = 500.0f;
 
 enum class AppState {
     Starting,
@@ -77,12 +77,17 @@ struct RawInputFrame {
 };
 
 struct CursorState {
+    uint8_t id = 0;
     POINT pos = {};
+    LONG deltaX = 0, deltaY = 0;
     DWORD color = 0xFFFFFFFF;
     std::wstring label;
     bool buttons[5] = {};
     bool visible = true;
     bool dirty = true;
+    float opacity = 0.8f;
+    float speedMultiplier = 1.0f;
+    float cursorSize = 12.0f;
 };
 
 struct RippleState {
@@ -98,8 +103,10 @@ struct DeviceInfo {
     HANDLE hDevice = nullptr;
     std::wstring name;
     std::wstring path;
+    std::wstring deviceId;
     DeviceType type = DeviceType::Other;
     bool isMouse = false;
+    bool connected = true;
 };
 
 struct DeviceEvent {
@@ -117,6 +124,20 @@ struct CursorEvent {
     std::wstring label;
     DWORD color;
     bool visible;
+};
+
+struct KeyboardEvent {
+    HANDLE hDevice = nullptr;
+    USHORT virtualKey = 0;
+    USHORT makeCode = 0;
+    USHORT flags = 0;
+    ULONG message = 0;
+    ULONG extraInformation = 0;
+};
+
+struct StateEvent {
+    AppState from;
+    AppState to;
 };
 
 struct ErrorEvent {

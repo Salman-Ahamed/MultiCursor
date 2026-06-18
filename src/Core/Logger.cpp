@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cwchar>
 #include <vector>
+#include <filesystem>
 
 Logger& Logger::Instance() {
     static Logger instance;
@@ -22,6 +23,7 @@ void Logger::Init(const std::wstring& directory) {
     tm local;
     localtime_s(&local, &tt);
     m_day = local.tm_mday;
+    m_rotationCount = 0;
     auto path = m_directory + L"\\" + FilenameForDate();
     m_file.open(path, std::ios::app);
 }
@@ -52,7 +54,8 @@ void Logger::Log(Severity sev, const wchar_t* fmt, ...) {
     va_end(args);
 
     wchar_t line[4608];
-    swprintf_s(line, L"[%02d:%02d:%02d.%03d][%s] %s\n",
+    swprintf_s(line, L"[%04d-%02d-%02d %02d:%02d:%02d.%03d][%s] %s\n",
+        1900 + local.tm_year, 1 + local.tm_mon, local.tm_mday,
         local.tm_hour, local.tm_min, local.tm_sec, (int)ms.count(),
         SeverityStr(sev), buf);
 
@@ -60,6 +63,8 @@ void Logger::Log(Severity sev, const wchar_t* fmt, ...) {
     m_file.flush();
 
     OutputDebugStringW(line);
+    fputws(line, stdout);
+    fflush(stdout);
 }
 
 const wchar_t* Logger::SeverityStr(Severity s) {
@@ -77,13 +82,31 @@ void Logger::RotateIfNeeded() {
     auto pos = m_file.tellp();
     if (pos > kMaxFileSize) {
         m_file.close();
-        auto now = std::chrono::system_clock::now();
-        auto tt = std::chrono::system_clock::to_time_t(now);
-        tm local;
-        localtime_s(&local, &tt);
-        std::wstring old = m_directory + L"\\" + FilenameForDate() + L".old";
-        std::wstring current = m_directory + L"\\" + FilenameForDate();
+        m_rotationCount++;
+
+        auto base = m_directory + L"\\" + FilenameForDate();
+        std::wstring old = base + L"." + std::to_wstring(m_rotationCount - 1);
+        std::wstring current = base;
         _wrename(current.c_str(), old.c_str());
+
+        // Remove excess old files beyond the limit
+        std::wstring oldPrefix = base.substr(0, base.find_last_of(L'.'));
+        int count = 0;
+        for (auto& entry : std::filesystem::directory_iterator(m_directory)) {
+            if (entry.path().wstring().find(oldPrefix) == 0 && entry.path().extension() != L".log") {
+                count++;
+            }
+        }
+        if (count > kMaxLogFiles) {
+            int toRemove = count - kMaxLogFiles;
+            for (auto& entry : std::filesystem::directory_iterator(m_directory)) {
+                if (toRemove <= 0) break;
+                if (entry.path().wstring().find(oldPrefix) == 0 && entry.path().extension() != L".log") {
+                    std::filesystem::remove(entry.path());
+                    toRemove--;
+                }
+            }
+        }
     }
 }
 

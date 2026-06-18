@@ -5,8 +5,12 @@
 #include "Core/DeviceManager.h"
 #include "Core/InputManager.h"
 #include "Core/CursorManager.h"
+#include "Core/ProfileManager.h"
 #include "Platform/RawInputHandler.h"
 #include "Platform/WindowManager.h"
+#include "Platform/DeviceEnumerator.h"
+#include "Platform/WindowsSettings.h"
+#include "Platform/MonitorManager.h"
 #include "Rendering/Direct2DRenderer.h"
 #include "Rendering/OverlayRenderer.h"
 #include "UI/MainWindow.h"
@@ -24,12 +28,17 @@
 
 namespace {
     HINSTANCE g_hInstance = nullptr;
-    SettingsManager g_settings;
     DeviceEventBus g_deviceBus;
+    CursorEventBus g_cursorBus;
+    KeyboardEventBus g_keyboardBus;
     ErrorEventBus g_errorBus;
-    AppStateMachine g_stateMachine;
+    SettingsEventBus g_settingsBus;
+    StateEventBus g_stateBus;
+    SettingsManager g_settings{g_settingsBus};
+    AppStateMachine g_stateMachine{g_stateBus};
     std::unique_ptr<DeviceManager> g_deviceMgr;
     std::unique_ptr<InputManager> g_inputMgr;
+    std::unique_ptr<ProfileManager> g_profileMgr;
     std::unique_ptr<CursorManager> g_cursorMgr;
     std::unique_ptr<RawInputHandler> g_rawInput;
     std::unique_ptr<WindowManager> g_windowMgr;
@@ -38,9 +47,23 @@ namespace {
     std::unique_ptr<MainWindow> g_mainWindow;
     std::unique_ptr<SettingsWindow> g_settingsWindow;
     std::thread g_inputThread;
-    NOTIFYICONDATAW g_trayIcon = {};
     std::atomic<bool> g_running{ true };
     std::wstring g_logDir;
+    std::wstring g_profileDir;
+
+    std::wstring ExtractLabel(const DeviceInfo& dev) {
+        auto label = dev.name;
+        auto hashPos = label.find_last_of(L'#');
+        if (hashPos != std::wstring::npos) {
+            auto colPos = label.rfind(L'#', hashPos - 1);
+            if (colPos != std::wstring::npos && colPos + 1 < label.size()) {
+                label = label.substr(colPos + 1, hashPos - colPos - 1);
+            } else {
+                label = label.substr(0, hashPos);
+            }
+        }
+        return label;
+    }
 }
 
 LONG WINAPI CrashHandler(EXCEPTION_POINTERS* exc) {
@@ -64,7 +87,7 @@ LONG WINAPI CrashHandler(EXCEPTION_POINTERS* exc) {
 
 void InputThreadProc() {
     SetThreadDescription(GetCurrentThread(), L"MultiCursor Input");
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
     if (!g_rawInput->Initialize()) {
         LOG_ERROR(L"Failed to initialize RawInputHandler");
@@ -78,26 +101,23 @@ void InputThreadProc() {
     PostMessageW(g_mainWindow->Handle(), WM_APP + 2, 0, 0);
 
     // Subscribe to device events for hot-plug updates
-    auto deviceSub = g_deviceBus.Subscribe([](const DeviceEvent& e) {
+    auto deviceSub = g_deviceBus.Subscribe([&](const DeviceEvent& e) {
         // Notify main window (on UI thread via PostMessage)
         PostMessageW(g_mainWindow->Handle(), WM_APP + 2, 0, 0);
+
+        if (e.type == DeviceEvent::Added) {
+            g_mainWindow->Tray().ShowBalloon(L"Device Connected", e.device.name.c_str(), NIIF_INFO);
+        } else if (e.type == DeviceEvent::Removed) {
+            g_mainWindow->Tray().ShowBalloon(L"Device Disconnected", e.device.name.c_str(), NIIF_WARNING);
+        }
 
         // Add cursors for any new devices
         for (auto& dev : g_deviceMgr->Devices()) {
             if (!dev.isMouse) continue;
             UINT existingIdx = g_cursorMgr->LookupCursor(dev.hDevice);
             if (existingIdx == (UINT)-1) {
-                auto label = dev.name;
-                auto hashPos = label.find_last_of(L'#');
-                if (hashPos != std::wstring::npos) {
-                    auto colPos = label.rfind(L'#', hashPos - 1);
-                    if (colPos != std::wstring::npos && colPos + 1 < label.size()) {
-                        label = label.substr(colPos + 1, hashPos - colPos - 1);
-                    } else {
-                        label = label.substr(0, hashPos);
-                    }
-                }
-                g_cursorMgr->AddCursor(dev.hDevice, label);
+                auto label = ExtractLabel(dev);
+                g_cursorMgr->AddCursor(dev.hDevice, dev.path, label);
             }
         }
     });
@@ -105,17 +125,8 @@ void InputThreadProc() {
     // Add cursors for all detected mouse devices
     for (auto& dev : g_deviceMgr->Devices()) {
         if (dev.isMouse) {
-            auto label = dev.name;
-            auto hashPos = label.find_last_of(L'#');
-            if (hashPos != std::wstring::npos) {
-                auto colPos = label.rfind(L'#', hashPos - 1);
-                if (colPos != std::wstring::npos && colPos + 1 < label.size()) {
-                    label = label.substr(colPos + 1, hashPos - colPos - 1);
-                } else {
-                    label = label.substr(0, hashPos);
-                }
-            }
-            g_cursorMgr->AddCursor(dev.hDevice, label);
+            auto label = ExtractLabel(dev);
+            g_cursorMgr->AddCursor(dev.hDevice, dev.path, label);
         }
     }
 
@@ -143,17 +154,6 @@ void InputThreadProc() {
     CoUninitialize();
 }
 
-void InitTrayIcon(HWND hwnd) {
-    g_trayIcon.cbSize = sizeof(NOTIFYICONDATAW);
-    g_trayIcon.hWnd = hwnd;
-    g_trayIcon.uID = 1;
-    g_trayIcon.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-    g_trayIcon.uCallbackMessage = WM_APP + 1;
-    g_trayIcon.hIcon = LoadIconW(g_hInstance, MAKEINTRESOURCE(101));
-    wcscpy_s(g_trayIcon.szTip, L"MultiCursor");
-    Shell_NotifyIconW(NIM_ADD, &g_trayIcon);
-}
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     g_hInstance = hInstance;
 
@@ -175,6 +175,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     SetUnhandledExceptionFilter(CrashHandler);
+
+    CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
     wchar_t modulePath[MAX_PATH];
     GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
@@ -221,18 +223,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         return 1;
     }
 
+    // Create profile directory
+    g_profileDir = std::wstring(appData) + L"\\MultiCursor\\profiles";
+    CreateDirectoryW(g_profileDir.c_str(), nullptr);
+
     // Create shared core objects before starting threads
     g_deviceMgr = std::make_unique<DeviceManager>(g_deviceBus);
     g_inputMgr = std::make_unique<InputManager>();
-    g_cursorMgr = std::make_unique<CursorManager>(g_deviceBus);
-    g_rawInput = std::make_unique<RawInputHandler>(*g_inputMgr, *g_deviceMgr);
+    g_profileMgr = std::make_unique<ProfileManager>(g_profileDir);
+    g_cursorMgr = std::make_unique<CursorManager>(g_deviceBus, *g_profileMgr);
+    g_rawInput = std::make_unique<RawInputHandler>(*g_inputMgr, *g_deviceMgr, g_keyboardBus);
 
-    // Wire device manager to main window
+    // Wire device manager and cursor manager to main window
     g_mainWindow->SetDeviceManager(g_deviceMgr.get());
+    g_mainWindow->SetCursorManager(g_cursorMgr.get());
+    if (g_settingsWindow) g_settingsWindow->SetCursorManager(g_cursorMgr.get());
 
     // Create overlay renderer
     g_overlay = std::make_unique<OverlayRenderer>(*g_renderer, *g_cursorMgr, *g_inputMgr,
                                                    g_settings, g_stateMachine);
+
+    // Wire keyboard event bus
+    g_keyboardBus.Subscribe([](const KeyboardEvent& e) {
+        LOG_DEBUG(L"Keyboard: VKey=0x%04X MakeCode=0x%04X Flags=0x%04X", e.virtualKey, e.makeCode, e.flags);
+    });
 
     // Wire error event bus
     g_errorBus.Subscribe([](const ErrorEvent& e) {
@@ -253,7 +267,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     if (dev.isMouse) {
                         UINT existingIdx = g_cursorMgr->LookupCursor(dev.hDevice);
                         if (existingIdx == (UINT)-1) {
-                            g_cursorMgr->AddCursor(dev.hDevice, dev.name);
+                            g_cursorMgr->AddCursor(dev.hDevice, dev.path, dev.name);
                         }
                     }
                 }
@@ -272,7 +286,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     });
 
     // System tray icon
-    InitTrayIcon(g_mainWindow->Handle());
+    g_mainWindow->Tray().Initialize(hInstance, g_mainWindow->Handle());
+    g_mainWindow->Tray().ShowBalloon(L"MultiCursor", L"MultiCursor is running in the background");
 
     // Register hotkey
     RegisterHotKey(g_mainWindow->Handle(), 1, MOD_CONTROL | MOD_ALT, 'M');
@@ -292,15 +307,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     // Main message loop
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0) > 0) {
-        if (msg.message == WM_APP + 1) {
-            switch (msg.lParam) {
-            case WM_LBUTTONDBLCLK:
-                ShowWindow(g_mainWindow->Handle(), SW_SHOW);
-                SetForegroundWindow(g_mainWindow->Handle());
-                break;
-            }
-        }
-
         if (msg.message == WM_HOTKEY && msg.wParam == 1) {
             if (IsWindowVisible(g_mainWindow->Handle())) {
                 ShowWindow(g_mainWindow->Handle(), SW_HIDE);
@@ -328,7 +334,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     g_overlay->Stop();
     if (g_inputThread.joinable()) g_inputThread.join();
 
-    Shell_NotifyIconW(NIM_DELETE, &g_trayIcon);
+    g_mainWindow->Tray().Remove();
     UnregisterHotKey(g_mainWindow->Handle(), 1);
 
     LOG_INFO(L"MultiCursor exited");

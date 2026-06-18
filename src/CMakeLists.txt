@@ -9,12 +9,19 @@ set(SOURCES
     Core/InputManager.cpp
     Core/CursorManager.cpp
     Core/ClickForwarder.cpp
+    Core/ProfileManager.cpp
     Platform/RawInputHandler.cpp
     Platform/WindowManager.cpp
+    Platform/DeviceEnumerator.cpp
+    Platform/WindowsSettings.cpp
+    Platform/MonitorManager.cpp
     Rendering/Direct2DRenderer.cpp
     Rendering/OverlayRenderer.cpp
+    Rendering/CursorRenderer.cpp
+    Rendering/ClickEffects.cpp
     UI/MainWindow.cpp
     UI/SettingsWindow.cpp
+    UI/TrayManager.cpp
 )
 
 add_executable(MultiCursor WIN32 ${SOURCES} ${CMAKE_SOURCE_DIR}/resources/app.rc)
@@ -38,7 +45,10 @@ target_link_libraries(MultiCursor PRIVATE
     comdlg32.lib
     wtsapi32.lib
     dwmapi.lib
+    gdi32.lib
+    version.lib
     dbghelp.lib
+    shcore.lib
 )
 
 set_target_properties(MultiCursor PROPERTIES

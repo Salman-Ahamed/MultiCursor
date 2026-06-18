@@ -3,13 +3,14 @@
 #include "Core/Types.h"
 #include "Core/InputManager.h"
 #include "Core/DeviceManager.h"
+#include "Core/EventBus.h"
 #include <functional>
 
 class RawInputHandler {
 public:
     using InputCallback = std::function<void(HANDLE, const RAWINPUT&)>;
 
-    RawInputHandler(InputManager& inputMgr, DeviceManager& devMgr);
+    RawInputHandler(InputManager& inputMgr, DeviceManager& devMgr, KeyboardEventBus& kbBus);
     ~RawInputHandler();
 
     bool Initialize();
@@ -27,6 +28,7 @@ private:
 
     InputManager& m_inputMgr;
     DeviceManager& m_devMgr;
+    KeyboardEventBus& m_kbBus;
     HWND m_hwnd = nullptr;
     std::vector<uint8_t> m_buffer;
 

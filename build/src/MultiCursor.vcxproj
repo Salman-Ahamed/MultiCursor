@@ -122,7 +122,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;dbghelp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;gdi32.lib;version.lib;dbghelp.lib;shcore.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <DataExecutionPrevention></DataExecutionPrevention>
@@ -178,7 +178,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;dbghelp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;gdi32.lib;version.lib;dbghelp.lib;shcore.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <DataExecutionPrevention></DataExecutionPrevention>
@@ -234,7 +234,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;dbghelp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;gdi32.lib;version.lib;dbghelp.lib;shcore.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <DataExecutionPrevention></DataExecutionPrevention>
@@ -289,7 +289,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;dbghelp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>dcomp.lib;d2d1.lib;dwrite.lib;dxgi.lib;d3d11.lib;hid.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;oleaut32.lib;shlwapi.lib;comctl32.lib;comdlg32.lib;wtsapi32.lib;dwmapi.lib;gdi32.lib;version.lib;dbghelp.lib;shcore.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <DataExecutionPrevention></DataExecutionPrevention>
@@ -372,12 +372,19 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Core\InputManager.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Core\CursorManager.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Core\ClickForwarder.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Core\ProfileManager.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\RawInputHandler.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\WindowManager.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\DeviceEnumerator.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\WindowsSettings.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\MonitorManager.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\Direct2DRenderer.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\OverlayRenderer.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\CursorRenderer.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\ClickEffects.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\UI\MainWindow.cpp" />
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\UI\SettingsWindow.cpp" />
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\UI\TrayManager.cpp" />
     <ResourceCompile Include="D:\codes\work\org\Multi-Mouse-Detection\resources\app.rc" />
   </ItemGroup>
   <ItemGroup />

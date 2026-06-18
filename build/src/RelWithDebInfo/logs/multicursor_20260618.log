@@ -221,3 +221,23 @@
 [12:56:49.322][INF] State: 1 -> 5
 [12:56:49.337][INF] Render thread stopped
 [12:56:49.337][INF] MultiCursor exited
+[2026-06-18 14:22:27.205][INF] MultiCursor starting...
+[2026-06-18 14:22:27.218][INF] MainWindow initialized
+[2026-06-18 14:22:27.219][INF] SettingsWindow initialized
+[2026-06-18 14:22:27.235][INF] WindowManager initialized
+[2026-06-18 14:22:27.334][INF] DComp: IDCompositionDesktopDevice (via CreateDevice2)
+[2026-06-18 14:22:27.335][INF] Direct2DRenderer initialized (GPU), size: 5760x2160
+[2026-06-18 14:22:27.337][INF] DCompositionWaitForCompositorClock loaded (Win11+ frame pacing)
+[2026-06-18 14:22:27.346][INF] Tray icon initialized
+[2026-06-18 14:22:27.383][INF] Render thread started
+[2026-06-18 14:22:27.386][ERR] RegisterRawInputDevices failed: 1004
+[2026-06-18 14:22:27.386][ERR] Failed to initialize RawInputHandler
+[2026-06-18 14:22:27.386][INF] State: 0 -> 5
+[2026-06-18 14:22:27.388][WRN] DComp surface BeginDraw rejected D2D IIDs, trying swap chain fallback
+[2026-06-18 14:22:27.388][INF] Creating swap chain for composition
+[2026-06-18 14:22:27.394][INF] Swap chain created successfully (5760x2160)
+[2026-06-18 14:22:27.394][INF] Swap chain fallback successful
+[2026-06-18 14:22:27.395][INF] MultiCursor initialized, entering message loop
+[2026-06-18 14:23:42.324][INF] MultiCursor shutting down
+[2026-06-18 14:23:42.332][INF] Render thread stopped
+[2026-06-18 14:23:42.332][INF] MultiCursor exited

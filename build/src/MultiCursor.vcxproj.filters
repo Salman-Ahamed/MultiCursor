@@ -25,10 +25,22 @@
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Core\ClickForwarder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Core\ProfileManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\RawInputHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\WindowManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\DeviceEnumerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\WindowsSettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Platform\MonitorManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\Direct2DRenderer.cpp">
@@ -37,10 +49,19 @@
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\OverlayRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\CursorRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\Rendering\ClickEffects.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\UI\MainWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\UI\SettingsWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\codes\work\org\Multi-Mouse-Detection\src\UI\TrayManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

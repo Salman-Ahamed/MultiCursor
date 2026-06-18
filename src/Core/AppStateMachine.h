@@ -11,6 +11,9 @@ public:
     using StateCallback = std::function<void(AppState, AppState)>;
     using Token = size_t;
 
+    AppStateMachine(StateEventBus& stateBus) : m_stateBus(stateBus) {}
+    AppStateMachine() : m_stateBus(m_internalBus) {}
+
     AppState Current() const {
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_state;
@@ -26,6 +29,8 @@ public:
             m_state = newState;
             cbs = m_callbacks;
         }
+        StateEvent se{ old, newState };
+        m_stateBus.Publish(se);
         for (auto& cb : cbs) cb.cb(old, newState);
         return true;
     }
@@ -54,4 +59,6 @@ private:
     std::vector<Entry> m_callbacks;
     Token m_nextToken = 0;
     mutable std::mutex m_mutex;
+    StateEventBus& m_stateBus;
+    StateEventBus m_internalBus;
 };

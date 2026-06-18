@@ -2,14 +2,18 @@
 #include "SettingsWindow.h"
 #include "Core/Logger.h"
 #include <commctrl.h>
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi.lib")
 
 MainWindow* MainWindow::s_instance = nullptr;
 
 MainWindow::MainWindow() {
     s_instance = this;
+    m_darkBgBrush = CreateSolidBrush(RGB(32, 32, 32));
 }
 
 MainWindow::~MainWindow() {
+    if (m_darkBgBrush) DeleteObject(m_darkBgBrush);
     if (s_instance == this) s_instance = nullptr;
 }
 
@@ -46,6 +50,9 @@ bool MainWindow::Initialize(HINSTANCE hInstance) {
     }
     // GWLP_USERDATA set in WM_NCCREATE via CREATESTRUCT.lpCreateParams
 
+    BOOL dark = TRUE;
+    DwmSetWindowAttribute(m_hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
+
     LOG_INFO(L"MainWindow initialized");
     return true;
 }
@@ -80,9 +87,13 @@ void MainWindow::OnCreate() {
         col.cx = 80;
         ListView_InsertColumn(m_deviceList, 1, &col);
 
-        col.pszText = (LPWSTR)L"Cursor";
-        col.cx = 60;
+        col.pszText = (LPWSTR)L"Color";
+        col.cx = 50;
         ListView_InsertColumn(m_deviceList, 2, &col);
+
+        col.pszText = (LPWSTR)L"Cursor";
+        col.cx = 50;
+        ListView_InsertColumn(m_deviceList, 3, &col);
     }
 
     HWND hSettings = CreateWindowExW(0, L"BUTTON", L"Settings",
@@ -94,6 +105,10 @@ void MainWindow::OnCreate() {
                                   WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                                   rc.right - 90, rc.bottom - 60, 80, 30,
                                   m_hwnd, (HMENU)1002, m_hInstance, nullptr);
+
+    m_statusBar = CreateWindowExW(0, STATUSCLASSNAMEW, nullptr,
+                                   WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP,
+                                   0, 0, 0, 0, m_hwnd, (HMENU)1003, m_hInstance, nullptr);
 }
 
 void MainWindow::OnDeviceListUpdate() {
@@ -134,8 +149,18 @@ void MainWindow::RefreshDeviceList() {
 
         if (idx >= 0) {
             ListView_SetItemText(m_deviceList, idx, 1, (LPWSTR)L"Active");
+            DWORD color = 0xFFE6194B;
+            if (m_cursorMgr) {
+                UINT cIdx = m_cursorMgr->LookupCursor(dev.hDevice);
+                if (cIdx != (UINT)-1) {
+                    auto* cs = m_cursorMgr->GetCursor(cIdx);
+                    if (cs) color = cs->color;
+                }
+            }
+            wchar_t colorStr[16]; swprintf_s(colorStr, L"0x%08X", color);
+            ListView_SetItemText(m_deviceList, idx, 2, colorStr);
             wchar_t buf[16]; swprintf_s(buf, L"%zu", i + 1);
-            ListView_SetItemText(m_deviceList, idx, 2, buf);
+            ListView_SetItemText(m_deviceList, idx, 3, buf);
         }
     }
 }
@@ -160,8 +185,29 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             GetClientRect(hwnd, &rc);
             SetWindowPos(self->m_deviceList, nullptr, 10, 10,
                          rc.right - 20, rc.bottom - 80, SWP_NOZORDER);
+            if (self->m_statusBar) {
+                SendMessageW(self->m_statusBar, WM_SIZE, 0, 0);
+            }
         }
         return 0;
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLORBTN:
+        if (self) {
+            SetBkColor((HDC)wParam, RGB(32, 32, 32));
+            SetTextColor((HDC)wParam, RGB(200, 200, 200));
+            return (LRESULT)self->m_darkBgBrush;
+        }
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
+
+    case WM_ERASEBKGND:
+        if (self) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            FillRect((HDC)wParam, &rc, self->m_darkBgBrush);
+            return 1;
+        }
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
 
     case WM_COMMAND:
         if (LOWORD(wParam) == 1001) {
@@ -170,8 +216,50 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 self->m_settingsWindow->Show();
             }
         } else if (LOWORD(wParam) == 1002) {
-            DestroyWindow(hwnd);
+            PostQuitMessage(0);
         }
+        return 0;
+
+    case WM_NOTIFY: {
+        LPNMHDR nmh = (LPNMHDR)lParam;
+        if (nmh->hwndFrom == self->m_deviceList && nmh->code == NM_CUSTOMDRAW) {
+            LPNMLVCUSTOMDRAW cd = (LPNMLVCUSTOMDRAW)lParam;
+            if (cd->nmcd.dwDrawStage == CDDS_PREPAINT)
+                return CDRF_NOTIFYITEMDRAW;
+            if (cd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+                return CDRF_NOTIFYSUBITEMDRAW;
+            if (cd->nmcd.dwDrawStage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM) && cd->iSubItem == 2) {
+                LVITEMW lvi = {};
+                lvi.mask = LVIF_PARAM;
+                lvi.iItem = (int)cd->nmcd.dwItemSpec;
+                ListView_GetItem(self->m_deviceList, &lvi);
+                HANDLE hDev = (HANDLE)lvi.lParam;
+                DWORD color = 0xFFE6194B;
+                if (self->m_cursorMgr) {
+                    UINT cIdx = self->m_cursorMgr->LookupCursor(hDev);
+                    if (cIdx != (UINT)-1) {
+                        auto* cs = self->m_cursorMgr->GetCursor(cIdx);
+                        if (cs) color = cs->color;
+                    }
+                }
+                RECT rc;
+                ListView_GetSubItemRect(self->m_deviceList, (int)cd->nmcd.dwItemSpec, 2, LVIR_BOUNDS, &rc);
+                InflateRect(&rc, -3, -3);
+                HBRUSH brush = CreateSolidBrush(RGB(GetRValue(color), GetGValue(color), GetBValue(color)));
+                if (brush) {
+                    FillRect(cd->nmcd.hdc, &rc, brush);
+                    DeleteObject(brush);
+                }
+                FrameRect(cd->nmcd.hdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
+                SetBkMode(cd->nmcd.hdc, TRANSPARENT);
+                return CDRF_SKIPDEFAULT;
+            }
+        }
+        break;
+    }
+
+    case WM_CLOSE:
+        ShowWindow(hwnd, SW_HIDE);
         return 0;
 
     case WM_DESTROY:
@@ -180,6 +268,40 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
     case WM_APP + 2:
         if (self) self->RefreshDeviceList();
+        return 0;
+
+    case WM_APP + 1:
+        if (!self) break;
+        switch (lParam) {
+        case WM_LBUTTONDBLCLK:
+            ShowWindow(hwnd, SW_SHOW);
+            SetForegroundWindow(hwnd);
+            break;
+        case WM_RBUTTONUP: {
+            HMENU hMenu = CreatePopupMenu();
+            AppendMenuW(hMenu, MF_STRING, 3001, L"Show/Hide");
+            AppendMenuW(hMenu, MF_STRING, 3002, L"Settings");
+            AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+            AppendMenuW(hMenu, MF_STRING, 3003, L"Exit");
+            POINT pt;
+            GetCursorPos(&pt);
+            SetForegroundWindow(hwnd);
+            int cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, 0, hwnd, nullptr);
+            DestroyMenu(hMenu);
+            if (cmd == 3001) {
+                if (IsWindowVisible(hwnd))
+                    ShowWindow(hwnd, SW_HIDE);
+                else
+                    ShowWindow(hwnd, SW_SHOW);
+            } else if (cmd == 3002) {
+                ShowWindow(hwnd, SW_SHOW);
+                if (self->m_settingsWindow) self->m_settingsWindow->Show();
+            } else if (cmd == 3003) {
+                PostQuitMessage(0);
+            }
+            break;
+        }
+        }
         return 0;
     }
 

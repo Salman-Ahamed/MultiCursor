@@ -15,6 +15,9 @@ public:
     bool OnDeviceRemoval();
 
     const DeviceInfo* GetDevice(HANDLE hDevice) const;
+    const DeviceInfo* GetDeviceByPath(const std::wstring& path) const;
+    std::vector<const DeviceInfo*> GetMice() const;
+    std::vector<const DeviceInfo*> GetKeyboards() const;
     const std::vector<DeviceInfo>& Devices() const;
     UINT DeviceCount() const;
 

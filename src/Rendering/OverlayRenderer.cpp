@@ -47,7 +47,6 @@ void OverlayRenderer::RenderLoop() {
     m_frameCount = 0;
 
     std::array<CursorState, kMaxDevices> cursors;
-    std::vector<RippleState> ripples;
 
     while (m_running.load()) {
         if (m_suspended.load()) {
@@ -58,12 +57,13 @@ void OverlayRenderer::RenderLoop() {
         LateInputSample();
 
         RECT dirtyRect = ComputeDirtyRect();
-        m_cursorMgr.UpdateRipples(16.0f);
+        m_clickEffects.Update(16.0f);
 
         POINT offset = {};
         if (!m_renderer.BeginDraw(dirtyRect, offset)) {
             LOG_WARN(L"BeginDraw failed, attempting device recovery");
             if (m_renderer.Recreate()) {
+                m_modulesInitialized = false;
                 LOG_INFO(L"Device chain recovered successfully");
                 m_stateMachine.TransitionTo(AppState::DeviceLost);
                 m_stateMachine.TransitionTo(AppState::Recovering);
@@ -73,19 +73,19 @@ void OverlayRenderer::RenderLoop() {
             continue;
         }
 
-        // Thread-safe snapshot under mutex
         m_cursorMgr.SnapshotCursors(cursors);
-        m_cursorMgr.SnapshotRipples(ripples);
 
         auto* dc = m_renderer.D2DContext();
         auto* dwriteFactory = m_renderer.DWriteFactory();
 
-        // Read current settings
-        float cursorRadius = (float)m_settings.GetInt("cursor_size", 12);
-        float cursorOpacity = m_settings.GetFloat("cursor_opacity", 0.8f);
-        bool showLabels = m_settings.GetBool("show_labels", true);
+        if (!m_modulesInitialized && dc) {
+            m_cursorRenderer.Initialize(dc, dwriteFactory);
+            m_clickEffects.Initialize(dc);
+            m_modulesInitialized = true;
+        }
 
-        // Clear dirty rect to transparent
+        float cursorOpacity = m_settings.GetFloat("cursor_opacity", 0.8f);
+
         D2D1_RECT_F clipRect = D2D1::RectF(
             (FLOAT)dirtyRect.left, (FLOAT)dirtyRect.top,
             (FLOAT)dirtyRect.right, (FLOAT)dirtyRect.bottom);
@@ -93,86 +93,14 @@ void OverlayRenderer::RenderLoop() {
         dc->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
         dc->PopAxisAlignedClip();
 
-        // DIAGNOSTIC: draw a solid red rectangle to verify overlay is visible
-        {
-            ComPtr<ID2D1SolidColorBrush> diagBrush;
-            dc->CreateSolidColorBrush(D2D1::ColorF(1.0f, 0.0f, 0.0f, 0.8f), &diagBrush);
-            if (diagBrush) {
-                D2D1_RECT_F diagRect = D2D1::RectF(100.0f, 100.0f, 300.0f, 300.0f);
-                dc->FillRectangle(diagRect, diagBrush.Get());
-            }
-        }
-
-        // Draw cursors from snapshot
         for (UINT i = 0; i < kMaxDevices; i++) {
             auto& cursor = cursors[i];
-            if (!cursor.visible) continue;
-            if (!cursor.dirty) continue;
-
-            D2D1_COLOR_F color;
-            color.r = ((cursor.color >> 16) & 0xFF) / 255.0f;
-            color.g = ((cursor.color >> 8) & 0xFF) / 255.0f;
-            color.b = (cursor.color & 0xFF) / 255.0f;
-            color.a = cursorOpacity;
-
-            ComPtr<ID2D1SolidColorBrush> brush;
-            dc->CreateSolidColorBrush(color, &brush);
-            if (!brush) continue;
-
-            D2D1_ELLIPSE ellipse = D2D1::Ellipse(
-                D2D1::Point2F((FLOAT)cursor.pos.x, (FLOAT)cursor.pos.y),
-                cursorRadius, cursorRadius);
-
-            dc->FillEllipse(ellipse, brush.Get());
-
-            D2D1_COLOR_F outlineColor = { 0.0f, 0.0f, 0.0f, 0.5f };
-            ComPtr<ID2D1SolidColorBrush> outlineBrush;
-            dc->CreateSolidColorBrush(outlineColor, &outlineBrush);
-            if (outlineBrush) {
-                dc->DrawEllipse(ellipse, outlineBrush.Get(), 1.5f);
-            }
-
-            // Draw label if enabled
-            if (showLabels && !cursor.label.empty() && dwriteFactory) {
-                ComPtr<IDWriteTextFormat> textFormat;
-                dwriteFactory->CreateTextFormat(
-                    L"Segoe UI", nullptr,
-                    DWRITE_FONT_WEIGHT_NORMAL,
-                    DWRITE_FONT_STYLE_NORMAL,
-                    DWRITE_FONT_STRETCH_NORMAL,
-                    11.0f, L"en-US", &textFormat);
-                if (textFormat) {
-                    textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-                    textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-                    static_cast<ID2D1RenderTarget*>(dc)->DrawTextW(
-                        cursor.label.c_str(), (UINT32)cursor.label.size(),
-                        textFormat.Get(),
-                        D2D1::RectF(
-                            (FLOAT)cursor.pos.x - 50,
-                            (FLOAT)cursor.pos.y + cursorRadius + 2,
-                            (FLOAT)cursor.pos.x + 50,
-                            (FLOAT)cursor.pos.y + cursorRadius + 18),
-                        brush.Get());
-                }
-            }
+            UpdateDirtyRect(cursor);
+            if (!cursor.visible || !cursor.dirty) continue;
+            m_cursorRenderer.DrawCursor(dc, cursor, cursorOpacity);
         }
 
-        // Draw ripples from snapshot
-        D2D1_COLOR_F rippleColor = { 1.0f, 1.0f, 1.0f, 0.6f };
-        ComPtr<ID2D1SolidColorBrush> rippleBrush;
-        dc->CreateSolidColorBrush(rippleColor, &rippleBrush);
-
-        for (auto& ripple : ripples) {
-            if (!ripple.active) continue;
-            if (!rippleBrush) continue;
-
-            rippleBrush->SetOpacity(ripple.opacity);
-
-            D2D1_ELLIPSE re = D2D1::Ellipse(
-                D2D1::Point2F((FLOAT)ripple.center.x, (FLOAT)ripple.center.y),
-                ripple.radius, ripple.radius);
-            dc->DrawEllipse(re, rippleBrush.Get(), ripple.strokeWidth);
-        }
+        m_clickEffects.Draw(dc);
 
         m_renderer.EndDraw();
         m_renderer.Commit();
@@ -212,10 +140,23 @@ void OverlayRenderer::LateInputSample() {
 
         POINT cursorPos = cursor->pos;
 
+        if (state.wheelDelta != 0 || state.wheelHDelta != 0)
+            m_cursorMgr.UpdateScroll(cursorIdx, state.wheelDelta, state.wheelHDelta);
+
+        if (state.buttonFlags & RI_MOUSE_BUTTON_1_DOWN)
+            m_clickEffects.Trigger(cursorPos, MouseButton::Left);
+        if (state.buttonFlags & RI_MOUSE_BUTTON_2_DOWN)
+            m_clickEffects.Trigger(cursorPos, MouseButton::Right);
+        if (state.buttonFlags & RI_MOUSE_BUTTON_3_DOWN)
+            m_clickEffects.Trigger(cursorPos, MouseButton::Middle);
+        if (state.buttonFlags & RI_MOUSE_BUTTON_4_DOWN)
+            m_clickEffects.Trigger(cursorPos, MouseButton::XButton1);
+        if (state.buttonFlags & RI_MOUSE_BUTTON_5_DOWN)
+            m_clickEffects.Trigger(cursorPos, MouseButton::XButton2);
+
         if (state.buttonFlags & (RI_MOUSE_BUTTON_1_DOWN | RI_MOUSE_BUTTON_2_DOWN |
                                  RI_MOUSE_BUTTON_3_DOWN | RI_MOUSE_BUTTON_4_DOWN |
                                  RI_MOUSE_BUTTON_5_DOWN)) {
-            m_cursorMgr.TriggerRipple(cursorPos);
             ClickForwarder::ForwardButtonDown(cursorPos, state.buttonFlags);
         }
         if (state.buttonFlags & (RI_MOUSE_BUTTON_1_UP | RI_MOUSE_BUTTON_2_UP |
@@ -227,6 +168,27 @@ void OverlayRenderer::LateInputSample() {
 }
 
 RECT OverlayRenderer::ComputeDirtyRect() {
-    RECT full = { 0, 0, m_renderer.SurfaceWidth(), m_renderer.SurfaceHeight() };
-    return full;
+    if (!m_hasDirtyRect) {
+        return { 0, 0, m_renderer.SurfaceWidth(), m_renderer.SurfaceHeight() };
+    }
+    RECT r = m_dirtyRect;
+    constexpr int pad = 64;
+    r.left = (std::max)(0L, (long)(r.left - pad));
+    r.top = (std::max)(0L, (long)(r.top - pad));
+    r.right = (std::min)((int)m_renderer.SurfaceWidth(), (int)(r.right + pad));
+    r.bottom = (std::min)((int)m_renderer.SurfaceHeight(), (int)(r.bottom + pad));
+    m_hasDirtyRect = false;
+    return r;
+}
+
+void OverlayRenderer::UpdateDirtyRect(const CursorState& cursor) {
+    if (!cursor.visible || !cursor.dirty) return;
+    RECT cr = { cursor.pos.x - 50, cursor.pos.y - 50,
+                cursor.pos.x + 50, cursor.pos.y + 50 };
+    if (m_hasDirtyRect) {
+        UnionRect(&m_dirtyRect, &m_dirtyRect, &cr);
+    } else {
+        m_dirtyRect = cr;
+        m_hasDirtyRect = true;
+    }
 }

@@ -26,8 +26,12 @@ public:
     }
 
     void Publish(const T& event) {
-        std::lock_guard lock(m_mutex);
-        for (auto& entry : m_callbacks) {
+        std::vector<Entry> cbs;
+        {
+            std::lock_guard lock(m_mutex);
+            cbs = m_callbacks;
+        }
+        for (auto& entry : cbs) {
             entry.cb(event);
         }
     }
@@ -43,4 +47,8 @@ private:
 };
 
 using DeviceEventBus = EventBus<DeviceEvent>;
+using CursorEventBus = EventBus<CursorEvent>;
 using ErrorEventBus = EventBus<ErrorEvent>;
+using SettingsEventBus = EventBus<AppSettings>;
+using StateEventBus = EventBus<StateEvent>;
+using KeyboardEventBus = EventBus<KeyboardEvent>;

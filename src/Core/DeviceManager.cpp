@@ -65,6 +65,32 @@ const DeviceInfo* DeviceManager::GetDevice(HANDLE hDevice) const {
     return nullptr;
 }
 
+const DeviceInfo* DeviceManager::GetDeviceByPath(const std::wstring& path) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto& d : m_devices) {
+        if (d.path == path) return &d;
+    }
+    return nullptr;
+}
+
+std::vector<const DeviceInfo*> DeviceManager::GetMice() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<const DeviceInfo*> mice;
+    for (auto& d : m_devices) {
+        if (d.isMouse) mice.push_back(&d);
+    }
+    return mice;
+}
+
+std::vector<const DeviceInfo*> DeviceManager::GetKeyboards() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<const DeviceInfo*> keyboards;
+    for (auto& d : m_devices) {
+        if (d.type == DeviceType::Keyboard) keyboards.push_back(&d);
+    }
+    return keyboards;
+}
+
 const std::vector<DeviceInfo>& DeviceManager::Devices() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_devices;
@@ -102,6 +128,10 @@ bool DeviceManager::EnumerateUnlocked() {
         GetRawInputDeviceInfoW(list[i].hDevice, RIDI_DEVICENAME, &info.name[0], &nameLen);
         info.name.resize(wcslen(info.name.c_str()));
         info.path = info.name;
+        std::hash<std::wstring> hasher;
+        wchar_t idBuf[32];
+        swprintf_s(idBuf, L"%016zX", hasher(info.path));
+        info.deviceId = idBuf;
 
         if (!ClassifyDevice(list[i].hDevice, info, list[i].dwType))
             continue;

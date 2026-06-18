@@ -28,7 +28,9 @@ private:
     Severity m_minSeverity = Severity::Debug;
     std::wstring m_directory = L".";
     int m_day = 0;
+    int m_rotationCount = 0;
     static constexpr int64_t kMaxFileSize = 10 * 1024 * 1024;
+    static constexpr int kMaxLogFiles = 5;
 };
 
 #define LOG_DEBUG(...) Logger::Instance().Log(Severity::Debug, __VA_ARGS__)

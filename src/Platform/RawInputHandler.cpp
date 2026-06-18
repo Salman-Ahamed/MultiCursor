@@ -3,8 +3,8 @@
 
 RawInputHandler* RawInputHandler::s_instance = nullptr;
 
-RawInputHandler::RawInputHandler(InputManager& inputMgr, DeviceManager& devMgr)
-    : m_inputMgr(inputMgr), m_devMgr(devMgr) {
+RawInputHandler::RawInputHandler(InputManager& inputMgr, DeviceManager& devMgr, KeyboardEventBus& kbBus)
+    : m_inputMgr(inputMgr), m_devMgr(devMgr), m_kbBus(kbBus) {
     s_instance = this;
 }
 
@@ -33,13 +33,18 @@ bool RawInputHandler::Initialize() {
     }
     // GWLP_USERDATA set in WM_NCCREATE via CREATESTRUCT.lpCreateParams
 
-    RAWINPUTDEVICE rid = {};
-    rid.usUsagePage = 0x01;
-    rid.usUsage = 0x02;
-    rid.dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY | 0x8000;
-    rid.hwndTarget = m_hwnd;
+    RAWINPUTDEVICE rids[2] = {};
+    rids[0].usUsagePage = 0x01;
+    rids[0].usUsage = 0x02;
+    rids[0].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY | 0x8000;
+    rids[0].hwndTarget = m_hwnd;
 
-    if (!RegisterRawInputDevices(&rid, 1, sizeof(rid))) {
+    rids[1].usUsagePage = 0x01;
+    rids[1].usUsage = 0x06;
+    rids[1].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY | 0x8000;
+    rids[1].hwndTarget = m_hwnd;
+
+    if (!RegisterRawInputDevices(rids, 2, sizeof(RAWINPUTDEVICE))) {
         LOG_ERROR(L"RegisterRawInputDevices failed: %d", GetLastError());
         return false;
     }
@@ -112,6 +117,15 @@ void RawInputHandler::OnInput(WPARAM wParam, LPARAM lParam) {
     if (raw->header.dwType == RIM_TYPEMOUSE) {
                 if (raw->data.mouse.ulExtraInformation == kSendInputMagic) return;
         m_inputMgr.ProcessInput(raw->header.hDevice, *raw);
+    } else if (raw->header.dwType == RIM_TYPEKEYBOARD) {
+        KeyboardEvent kb{};
+        kb.hDevice = raw->header.hDevice;
+        kb.virtualKey = raw->data.keyboard.VKey;
+        kb.makeCode = raw->data.keyboard.MakeCode;
+        kb.flags = raw->data.keyboard.Flags;
+        kb.message = raw->data.keyboard.Message;
+        kb.extraInformation = raw->data.keyboard.ExtraInformation;
+        m_kbBus.Publish(kb);
     }
 
     DrainRawInputBuffer();
@@ -129,6 +143,15 @@ void RawInputHandler::DrainRawInputBuffer() {
             if (raw->header.dwType == RIM_TYPEMOUSE) {
                 if (raw->data.mouse.ulExtraInformation == kSendInputMagic) continue;
                 m_inputMgr.ProcessInput(raw->header.hDevice, *raw);
+            } else if (raw->header.dwType == RIM_TYPEKEYBOARD) {
+                KeyboardEvent kb{};
+                kb.hDevice = raw->header.hDevice;
+                kb.virtualKey = raw->data.keyboard.VKey;
+                kb.makeCode = raw->data.keyboard.MakeCode;
+                kb.flags = raw->data.keyboard.Flags;
+                kb.message = raw->data.keyboard.Message;
+                kb.extraInformation = raw->data.keyboard.ExtraInformation;
+                m_kbBus.Publish(kb);
             }
             raw = (RAWINPUT*)((uint8_t*)raw + raw->header.dwSize);
         }

@@ -7,6 +7,8 @@
 #include "Core/AppStateMachine.h"
 
 #include "Direct2DRenderer.h"
+#include "CursorRenderer.h"
+#include "ClickEffects.h"
 #include <atomic>
 #include <thread>
 
@@ -28,6 +30,7 @@ private:
     void WaitForFramePacing();
     void LateInputSample();
     RECT ComputeDirtyRect();
+    void UpdateDirtyRect(const CursorState& cursor);
 
     Direct2DRenderer& m_renderer;
     CursorManager& m_cursorMgr;
@@ -39,9 +42,17 @@ private:
     std::atomic<bool> m_running{ false };
     std::atomic<bool> m_suspended{ false };
 
+    CursorRenderer m_cursorRenderer;
+    ClickEffects m_clickEffects;
+    bool m_modulesInitialized = false;
+
     // Frame pacing
     using PFN_DCompositionWaitForCompositorClock = DWORD(WINAPI*)(UINT, const HANDLE*, DWORD);
     PFN_DCompositionWaitForCompositorClock m_waitForClock = nullptr;
+
+    // Dirty rect tracking
+    RECT m_dirtyRect = {};
+    bool m_hasDirtyRect = false;
 
     // Stat tracking
     uint64_t m_frameCount = 0;

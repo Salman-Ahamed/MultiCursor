@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-UINT CursorManager::AddCursor(HANDLE hDevice, const std::wstring& label) {
+UINT CursorManager::AddCursor(HANDLE hDevice, const std::wstring& devicePath, const std::wstring& label) {
     std::lock_guard lock(m_mutex);
     if (m_nextSlot >= kMaxDevices) {
         LOG_ERROR(L"Max cursors reached");
@@ -12,12 +12,14 @@ UINT CursorManager::AddCursor(HANDLE hDevice, const std::wstring& label) {
 
     UINT idx = m_nextSlot++;
     auto& cursor = m_cursors[idx];
-    cursor.color = kCursorColors[m_colorIndex % kCursorColorCount];
-    m_colorIndex++;
     cursor.label = label.empty() ? (L"Mouse " + std::to_wstring(idx + 1)) : label;
     cursor.dirty = true;
 
     m_cursorMap[hDevice] = idx;
+    m_devicePaths[hDevice] = devicePath;
+
+    LoadProfileForCursor(idx, devicePath);
+
     LOG_INFO(L"Added cursor %u: %s", idx, cursor.label.c_str());
     return idx;
 }
@@ -30,6 +32,7 @@ void CursorManager::RemoveCursor(HANDLE hDevice) {
     UINT idx = it->second;
     m_cursors[idx].visible = false;
     m_cursorMap.erase(it);
+    m_devicePaths.erase(hDevice);
     LOG_INFO(L"Removed cursor %u", idx);
 }
 
@@ -57,8 +60,9 @@ void CursorManager::UpdatePosition(UINT idx, LONG dx, LONG dy, bool absolute, LO
         cursor.pos.x = ax;
         cursor.pos.y = ay;
     } else {
-        cursor.pos.x += dx;
-        cursor.pos.y += dy;
+        float speed = cursor.speedMultiplier;
+        cursor.pos.x += (LONG)(dx * speed);
+        cursor.pos.y += (LONG)(dy * speed);
     }
 
     RECT virtualScreen;
@@ -82,6 +86,12 @@ void CursorManager::UpdateButton(UINT idx, int button, bool down) {
     if (down) {
         TriggerRippleUnlocked(m_cursors[idx].pos);
     }
+}
+
+void CursorManager::UpdateScroll(UINT idx, SHORT wheelDelta, SHORT wheelHDelta) {
+    std::lock_guard lock(m_mutex);
+    if (idx >= kMaxDevices) return;
+    LOG_DEBUG(L"Cursor %u scroll: wheel=%d hwheel=%d", idx, wheelDelta, wheelHDelta);
 }
 
 void CursorManager::TriggerRipple(POINT center) {
@@ -126,6 +136,14 @@ void CursorManager::SnapshotCursors(std::array<CursorState, kMaxDevices>& out) c
     out = m_cursors;
 }
 
+void CursorManager::GetAllCursors(std::vector<CursorState>& out) const {
+    std::lock_guard lock(m_mutex);
+    out.clear();
+    for (UINT i = 0; i < m_nextSlot; i++) {
+        out.push_back(m_cursors[i]);
+    }
+}
+
 void CursorManager::SnapshotRipples(std::vector<RippleState>& out) const {
     std::lock_guard lock(m_mutex);
     out = m_ripples;
@@ -152,12 +170,68 @@ void CursorManager::ClearRipples() {
     m_ripples.clear();
 }
 
+void CursorManager::SetCursorColor(UINT idx, DWORD color) {
+    std::lock_guard lock(m_mutex);
+    if (idx >= kMaxDevices) return;
+    m_cursors[idx].color = color;
+    m_cursors[idx].dirty = true;
+}
+
+void CursorManager::SetCursorLabel(UINT idx, const std::wstring& label) {
+    std::lock_guard lock(m_mutex);
+    if (idx >= kMaxDevices) return;
+    m_cursors[idx].label = label;
+    m_cursors[idx].dirty = true;
+}
+
+void CursorManager::SetCursorVisible(UINT idx, bool visible) {
+    std::lock_guard lock(m_mutex);
+    if (idx >= kMaxDevices) return;
+    m_cursors[idx].visible = visible;
+    m_cursors[idx].dirty = true;
+}
+
+void CursorManager::SetCursorSpeed(UINT idx, float speedMultiplier) {
+    std::lock_guard lock(m_mutex);
+    if (idx >= kMaxDevices) return;
+    m_cursors[idx].speedMultiplier = speedMultiplier;
+}
+
+void CursorManager::SetCursorSize(UINT idx, float size) {
+    std::lock_guard lock(m_mutex);
+    if (idx >= kMaxDevices) return;
+    m_cursors[idx].cursorSize = size;
+    m_cursors[idx].dirty = true;
+}
+
+void CursorManager::LoadProfileForCursor(UINT idx, const std::wstring& devicePath) {
+    if (devicePath.empty()) return;
+    CursorProfile profile = m_profileMgr.LoadProfile(devicePath);
+    auto& cursor = m_cursors[idx];
+    cursor.color = profile.color;
+    cursor.label = profile.label;
+    cursor.speedMultiplier = profile.speedMultiplier;
+    cursor.cursorSize = profile.cursorSize;
+    cursor.dirty = true;
+    LOG_DEBUG(L"Loaded profile for cursor %u (color=0x%08X, speed=%.1f)", idx, profile.color, profile.speedMultiplier);
+}
+
+void CursorManager::SaveProfileForCursor(UINT idx, const std::wstring& devicePath) {
+    if (devicePath.empty()) return;
+    auto& cursor = m_cursors[idx];
+    CursorProfile profile;
+    profile.color = cursor.color;
+    profile.label = cursor.label;
+    profile.speedMultiplier = cursor.speedMultiplier;
+    profile.cursorSize = cursor.cursorSize;
+    m_profileMgr.SaveProfile(devicePath, profile);
+}
+
 void CursorManager::OnDeviceEvent(const DeviceEvent& e) {
     std::lock_guard lock(m_mutex);
     if (e.type == DeviceEvent::Removed) {
         for (auto it = m_cursorMap.begin(); it != m_cursorMap.end(); ) {
             if (it->first == e.device.hDevice) {
-                // Inline ForcedButtonRelease to avoid re-locking m_mutex (deadlock)
                 auto& cursor = m_cursors[it->second];
                 for (int i = 0; i < 5; i++) {
                     if (cursor.buttons[i]) {
@@ -167,6 +241,7 @@ void CursorManager::OnDeviceEvent(const DeviceEvent& e) {
                     }
                 }
                 m_cursors[it->second].visible = false;
+                m_devicePaths.erase(it->first);
                 it = m_cursorMap.erase(it);
             } else {
                 ++it;
